@@ -3,6 +3,8 @@ package nz.ac.auckland.simple
 import net.stickycode.stereotype.configured.PostConfigured
 import nz.ac.auckland.common.config.ConfigKey
 import nz.ac.auckland.common.stereotypes.UniversityComponent
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 
 import javax.inject.Inject
@@ -16,6 +18,8 @@ import java.util.concurrent.TimeUnit
  */
 @UniversityComponent
 class PeriodicJobs {
+
+	private Logger log = LoggerFactory.getLogger(PeriodicJobs.class)
 
 	@Autowired(required = false)
 	List<PeriodicJob> multiThreadRunnables
@@ -50,6 +54,8 @@ class PeriodicJobs {
 			ScheduledFuture<?> future = singleThreadExecutor.scheduleWithFixedDelay(job.runnable, initialDelay, periodicDelay, TimeUnit.SECONDS)
 			singleThreadJobs.put(job, future)
 		}
+
+		log.info("${multiThreadJobs.size()} normal periodic jobs and ${singleThreadJobs.size()} queued period jobs registered")
 	}
 
 	public ScheduledFuture<?> getFuture(Object job){
