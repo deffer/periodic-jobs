@@ -1,0 +1,66 @@
+<?xml version="1.0"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>nz.ac.auckland</groupId>
+		<artifactId>uoa-groovy-parent</artifactId>
+		<version>3.12</version>
+	</parent>
+	<groupId>nz.ac.auckland.simple</groupId>
+	<artifactId>periodic-jobs</artifactId>
+	<packaging>jar</packaging>
+	<name>periodic-jobs</name>
+	<version>1.1-SNAPSHOT</version>
+
+	<description>
+		Simple scheduler for periodic jobs
+	</description>
+	<scm>
+		<url>https://github.com/deffer/periodic-jobs</url>
+		<connection>scm:git:https://github.com/deffer/periodic-jobs.git</connection>
+		<developerConnection>scm:git:git@github.com:deffer/periodic-jobs.git</developerConnection>
+	</scm>
+
+
+	<dependencies>
+
+		<dependency>
+			<groupId>nz.ac.auckland.common</groupId>
+			<artifactId>common-stereotypes</artifactId>
+			<version>[1,)</version>
+		</dependency>
+
+		<dependency>
+			<groupId>nz.ac.auckland.common</groupId>
+			<artifactId>common-configuration</artifactId>
+			<version>[2.5,)</version>
+		</dependency>
+
+		<dependency>
+			<groupId>nz.ac.auckland.composite</groupId>
+			<artifactId>composite-spring</artifactId>
+			<version>[5,)</version>
+		</dependency>
+
+		<dependency>
+			<groupId>nz.ac.auckland.composite</groupId>
+			<artifactId>composite-groovy</artifactId>
+			<version>[5,)</version>
+		</dependency>
+
+		<dependency>
+			<groupId>nz.ac.auckland.composite</groupId>
+			<artifactId>composite-spring-test</artifactId>
+			<version>[5,6)</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>nz.ac.auckland.common</groupId>
+			<artifactId>common-testrunner</artifactId>
+			<version>[1,2)</version>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+</project>
