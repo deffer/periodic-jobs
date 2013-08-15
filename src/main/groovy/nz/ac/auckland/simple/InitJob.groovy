@@ -1,12 +1,9 @@
 package nz.ac.auckland.simple
 
 /**
- * Created with IntelliJ IDEA.
- * User: iben883
- * Date: 15/08/13
- * Time: 10:10 AM
- * To change this template use File | Settings | File Templates.
+ * Init jobs are executed only once and on the same thread as queued periodic jobs.
  */
 public interface InitJob {
-
+	Runnable getRunnable()
+	Long getInitialDelay()
 }

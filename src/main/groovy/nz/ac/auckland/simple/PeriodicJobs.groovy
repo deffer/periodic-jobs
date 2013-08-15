@@ -23,9 +23,13 @@ class PeriodicJobs {
 
 	@Autowired(required = false)
 	List<PeriodicJob> multiThreadRunnables
-
 	@Autowired(required = false)
 	List<QueuedPeriodicJob> singleThreadRunnables
+	@Autowired(required = false)
+	List<InitJob> initRunnables
+
+	@ConfigKey("periodicJobs.enabled")
+	boolean enabled = true
 
 	@ConfigKey("periodicJobs.defaultInitialDelay")
 	Long defaultInitialDelay = 5
@@ -38,9 +42,14 @@ class PeriodicJobs {
 
 	Map<QueuedPeriodicJob, ScheduledFuture<?>> singleThreadJobs = [:]
 	Map<PeriodicJob, ScheduledFuture<?>> multiThreadJobs = [:]
+	Map<InitJob, ScheduledFuture<?>> initJobs = [:]
 
 	@PostConfigured
 	public void init(){
+		if (!enabled){
+			log.warn("Periodic jobs are disabled. To enable remove periodicJobs.enabled or set to true")
+			return
+		}
 		multiThreadRunnables.each { PeriodicJob job ->
 			Long initialDelay = job.initialDelay != null? job.initialDelay : defaultInitialDelay
 			Long periodicDelay = job.periodicDelay != null? job.periodicDelay : defaultPeriodicDelay
@@ -55,10 +64,16 @@ class PeriodicJobs {
 			singleThreadJobs.put(job, future)
 		}
 
-		log.info("${multiThreadJobs.size()} normal periodic jobs and ${singleThreadJobs.size()} queued period jobs registered")
+		initRunnables.each { InitJob job ->
+			Long initialDelay = job.initialDelay != null? job.initialDelay : defaultInitialDelay
+			ScheduledFuture<?> future = singleThreadExecutor.schedule(job.runnable, initialDelay, TimeUnit.SECONDS)
+			initJobs.put(job, future)
+		}
+
+		log.info("${multiThreadJobs.size()} normal jobs, ${singleThreadJobs.size()} queued jobs and ${initJobs.size()} init jobs registered")
 	}
 
 	public ScheduledFuture<?> getFuture(Object job){
-		return multiThreadJobs.get(job)?:singleThreadJobs.get(job)
+		return multiThreadJobs.get(job)?: (singleThreadJobs.get(job)?: initJobs.get(job))
 	}
 }
