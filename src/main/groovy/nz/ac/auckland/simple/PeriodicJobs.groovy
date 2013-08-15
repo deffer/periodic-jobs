@@ -14,7 +14,18 @@ import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 
 /**
- *  ScheduledFuture.isDone() returns true after periodic task was cancelled
+ *  Collects jobs (classes annotated with InitJob,PeriodicJob,QueuedPeriodicJob) and schedules them
+ *    for execution.
+ *
+ *  Has two execution pools: single thread and multithread.
+ *
+ *  InitJobs are only executed once and use single thread.
+ *  QueuePeriodicJobs use single thread, which means none of the Queued jobs can run simultaneously
+ *    with another Queued or Init job.  If job A has to start while other job is still running, job A will have to wait.
+ *  PeriodicJobs use multithread pool. It will grow to as many treads as required to run all PeriodicJobs
+ *    with respect to their initial and periodic delay setting.
+ *
+ *  Jobs execution can be turned off (for instance for tests) by setting property periodicJobs.enabled=false
  */
 @UniversityComponent
 class PeriodicJobs {
@@ -73,6 +84,12 @@ class PeriodicJobs {
 		log.info("${multiThreadJobs.size()} normal jobs, ${singleThreadJobs.size()} queued jobs and ${initJobs.size()} init jobs registered")
 	}
 
+	/**
+	 * Returns ScheduledFuture attached to given job. Contains some not very useful info.
+	 * ScheduledFuture.isDone() returns true if job has finished and is not scheduled to run again (for instance after periodic task was cancelled).
+	 * @param job
+	 * @return
+	 */
 	public ScheduledFuture<?> getFuture(Object job){
 		return multiThreadJobs.get(job)?: (singleThreadJobs.get(job)?: initJobs.get(job))
 	}
