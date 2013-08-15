@@ -40,7 +40,7 @@ class PeriodicJobs {
 	List<InitJob> initRunnables
 
 	@ConfigKey("periodicJobs.enabled")
-	boolean enabled = true
+	Boolean enabled = true
 
 	@ConfigKey("periodicJobs.defaultInitialDelay")
 	Long defaultInitialDelay = 5
