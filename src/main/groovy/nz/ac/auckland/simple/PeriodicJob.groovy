@@ -25,4 +25,9 @@ public interface PeriodicJob {
 	 */
 	Long getPeriodicDelay()
 
+	/**
+    * If returns true the job will not be scheduled and the onl way to stop it is to cancel it (using its Future)
+    * @return false if you don't want this job to be scheduled (usable during tests)
+    */
+	Boolean isEnabled()
 }

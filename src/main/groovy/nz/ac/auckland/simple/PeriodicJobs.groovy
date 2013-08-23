@@ -25,7 +25,10 @@ import java.util.concurrent.TimeUnit
  *  PeriodicJobs use multithread pool. It will grow to as many treads as required to run all PeriodicJobs
  *    with respect to their initial and periodic delay setting.
  *
- *  Jobs execution can be turned off (for instance for tests) by setting property periodicJobs.enabled=false
+ *  Job has to be enabled (isEnabled()==true) otherwise it will not be scheduled (this is usable for instance
+ *    when some jobs has to be turned off during tests)
+ *
+ *  Scheduler can be turned off globally (for all jobs) by setting System property periodicJobs.enabled=false
  */
 @UniversityComponent
 class PeriodicJobs {
@@ -34,8 +37,10 @@ class PeriodicJobs {
 
 	@Autowired(required = false)
 	List<PeriodicJob> multiThreadRunnables
+
 	@Autowired(required = false)
 	List<QueuedPeriodicJob> singleThreadRunnables
+
 	@Autowired(required = false)
 	List<InitJob> initRunnables
 
@@ -62,26 +67,41 @@ class PeriodicJobs {
 			return
 		}
 		multiThreadRunnables.each { PeriodicJob job ->
-			Long initialDelay = job.initialDelay != null? job.initialDelay : defaultInitialDelay
-			Long periodicDelay = job.periodicDelay != null? job.periodicDelay : defaultPeriodicDelay
-			ScheduledFuture<?> future = multiThreadExecutor.scheduleWithFixedDelay(job.runnable, initialDelay, periodicDelay, TimeUnit.SECONDS)
-			multiThreadJobs.put(job, future)
+			if (job.isEnabled()){
+				Long initialDelay = job.initialDelay != null? job.initialDelay : defaultInitialDelay
+				Long periodicDelay = job.periodicDelay != null? job.periodicDelay : defaultPeriodicDelay
+				ScheduledFuture<?> future = multiThreadExecutor.scheduleWithFixedDelay(job.runnable, initialDelay, periodicDelay, TimeUnit.SECONDS)
+				multiThreadJobs.put(job, future)
+			}
 		}
 
 		singleThreadRunnables.each { QueuedPeriodicJob job ->
-			Long initialDelay = job.initialDelay != null? job.initialDelay : defaultInitialDelay
-			Long periodicDelay = job.periodicDelay != null? job.periodicDelay : defaultPeriodicDelay
-			ScheduledFuture<?> future = singleThreadExecutor.scheduleWithFixedDelay(job.runnable, initialDelay, periodicDelay, TimeUnit.SECONDS)
-			singleThreadJobs.put(job, future)
+			if (job.isEnabled()){
+				Long initialDelay = job.initialDelay != null? job.initialDelay : defaultInitialDelay
+				Long periodicDelay = job.periodicDelay != null? job.periodicDelay : defaultPeriodicDelay
+				ScheduledFuture<?> future = singleThreadExecutor.scheduleWithFixedDelay(job.runnable, initialDelay, periodicDelay, TimeUnit.SECONDS)
+				singleThreadJobs.put(job, future)
+			}
 		}
 
 		initRunnables.each { InitJob job ->
-			Long initialDelay = job.initialDelay != null? job.initialDelay : defaultInitialDelay
-			ScheduledFuture<?> future = singleThreadExecutor.schedule(job.runnable, initialDelay, TimeUnit.SECONDS)
-			initJobs.put(job, future)
+			if (job.isEnabled()){
+				Long initialDelay = job.initialDelay != null? job.initialDelay : defaultInitialDelay
+				ScheduledFuture<?> future = singleThreadExecutor.schedule(job.runnable, initialDelay, TimeUnit.SECONDS)
+				initJobs.put(job, future)
+			}
 		}
 
 		log.info("${multiThreadJobs.size()} normal jobs, ${singleThreadJobs.size()} queued jobs and ${initJobs.size()} init jobs registered")
+	}
+
+	/**
+	 * Cancels given gob. If job is running, will wait for job to finish.
+	 * If there is a need to cancel job even if its still running, use getFuture() method.
+	 * @param job job to cancel. Has to be one of supported job interfaces.
+	 */
+	public void cancelJob(Object job){
+		getFuture(job)?.cancel(false)
 	}
 
 	/**

@@ -17,18 +17,20 @@ import java.util.concurrent.ScheduledFuture
 class LocalTest {
 	@Inject PeriodicJobs executor
 	@Inject BasicJob basicJob
+	@Inject DisabledJob disabledJob
 	@Inject StickyBootstrap bootstrap
 
 	@Test
-	public void testZeJobsTest(){
+	public void testJobs(){
 		int count = 0
-		ScheduledFuture<?> future = executor.getFuture(basicJob)
-		while (basicJob.count<2 && count < 5){
+		while (basicJob.count<3 && count < 7){
 			Thread.sleep(500)
 			count++
 		}
-		assert  basicJob.count >= 2
+		assert basicJob.count >= 2
+		assert disabledJob.count==0
 	}
+
 
 	@Before
 	public void init() {

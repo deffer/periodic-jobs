@@ -2,9 +2,8 @@ package nz.ac.auckland.simple
 
 import nz.ac.auckland.common.stereotypes.UniversityComponent
 
-
 @UniversityComponent
-class BasicJob implements PeriodicJob{
+class DisabledJob  implements PeriodicJob{
 
 	int count = 0
 
@@ -29,6 +28,6 @@ class BasicJob implements PeriodicJob{
 
 	@Override
 	Boolean isEnabled() {
-		return true
+		return false
 	}
 }
