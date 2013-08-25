@@ -1,4 +1,4 @@
-package nz.ac.auckland.simple
+package nz.ac.auckland.jobs.periodic
 
 import groovy.transform.CompileStatic
 /**

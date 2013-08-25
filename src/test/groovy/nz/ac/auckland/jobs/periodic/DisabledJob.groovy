@@ -1,6 +1,7 @@
-package nz.ac.auckland.simple
+package nz.ac.auckland.jobs.periodic
 
 import nz.ac.auckland.common.stereotypes.UniversityComponent
+import nz.ac.auckland.jobs.periodic.PeriodicJob
 
 @UniversityComponent
 class DisabledJob  implements PeriodicJob{

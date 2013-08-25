@@ -1,8 +1,9 @@
-package nz.ac.auckland.simple
+package nz.ac.auckland.jobs.periodic
 
 import net.stickycode.bootstrap.StickyBootstrap
 import nz.ac.auckland.common.testrunner.GroupAppsSpringTestRunner
 import nz.ac.auckland.common.testrunner.GroupAppsUnitTestRunner
+import nz.ac.auckland.jobs.periodic.PeriodicJobs
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith

@@ -1,4 +1,4 @@
-package nz.ac.auckland.simple
+package nz.ac.auckland.jobs.periodic
 
 import net.stickycode.stereotype.configured.PostConfigured
 import nz.ac.auckland.common.config.ConfigKey
