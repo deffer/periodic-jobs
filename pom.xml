@@ -7,7 +7,7 @@
 		<version>1.2</version>
 	</parent>
 
-	<groupId>nz.ac.auckland.simple</groupId>
+	<groupId>nz.ac.auckland.jobs</groupId>
 	<artifactId>periodic-jobs</artifactId>
 	<packaging>jar</packaging>
 	<name>periodic-jobs</name>
