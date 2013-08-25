@@ -1,8 +1,11 @@
 package nz.ac.auckland.simple
 
+import groovy.transform.CompileStatic
+
 /**
  * Init jobs are executed only once and on the same thread as queued periodic jobs.
  */
+@CompileStatic
 public interface InitJob {
 
 	/**

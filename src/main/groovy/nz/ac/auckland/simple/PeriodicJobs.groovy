@@ -7,11 +7,12 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 
-import javax.inject.Inject
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
+
+import groovy.transform.CompileStatic
 
 /**
  *  Collects jobs (classes annotated with InitJob,PeriodicJob,QueuedPeriodicJob) and schedules them
@@ -30,6 +31,7 @@ import java.util.concurrent.TimeUnit
  *
  *  Scheduler can be turned off globally (for all jobs) by setting System property periodicJobs.enabled=false
  */
+@CompileStatic
 @UniversityComponent
 class PeriodicJobs {
 
