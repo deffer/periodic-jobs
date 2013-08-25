@@ -3,10 +3,11 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<parent>
-		<groupId>nz.ac.auckland</groupId>
-		<artifactId>uoa-groovy-parent</artifactId>
-		<version>3.12</version>
+		<groupId>nz.ac.auckland.groupapps.parent</groupId>
+		<artifactId>parent-groovy-groupapps-central</artifactId>
+		<version>1.2</version>
 	</parent>
+
 	<groupId>nz.ac.auckland.simple</groupId>
 	<artifactId>periodic-jobs</artifactId>
 	<packaging>jar</packaging>
