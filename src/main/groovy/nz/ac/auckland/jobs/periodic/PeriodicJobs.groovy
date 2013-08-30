@@ -30,6 +30,8 @@ import groovy.transform.CompileStatic
  *    when some jobs has to be turned off during tests)
  *
  *  Scheduler can be turned off globally (for all jobs) by setting System property periodicJobs.enabled=false
+ *
+ * author: Irina Benediktovich - http://gplus.to/IrinaBenediktovich
  */
 @CompileStatic
 @UniversityComponent
