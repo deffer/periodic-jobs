@@ -39,6 +39,8 @@ class PeriodicJobs {
 
 	private Logger log = LoggerFactory.getLogger(PeriodicJobs.class)
 
+	String logInstance
+
 	@Autowired(required = false)
 	List<PeriodicJob> multiThreadRunnables
 
@@ -96,7 +98,12 @@ class PeriodicJobs {
 			}
 		}
 
-		log.info("${multiThreadJobs.size()} normal jobs, ${singleThreadJobs.size()} queued jobs and ${initJobs.size()} init jobs registered")
+		logInstance  = this.toString()
+		if (logInstance.indexOf('@')>0){
+			logInstance = logInstance.split('@').last()
+		}
+
+		log.info("${multiThreadJobs.size()} normal jobs, ${singleThreadJobs.size()} queued jobs and ${initJobs.size()} init jobs registered. Instance: $logInstance")
 	}
 
 	/**
