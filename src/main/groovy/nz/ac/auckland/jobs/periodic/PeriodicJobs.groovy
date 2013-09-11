@@ -1,5 +1,8 @@
 package nz.ac.auckland.jobs.periodic
 
+import com.google.common.cache.Cache
+import com.google.common.cache.CacheBuilder
+import groovy.transform.TypeCheckingMode
 import net.stickycode.stereotype.configured.PostConfigured
 import nz.ac.auckland.common.config.ConfigKey
 import nz.ac.auckland.common.stereotypes.UniversityComponent
@@ -7,6 +10,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 
+import java.text.SimpleDateFormat
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
@@ -41,6 +45,9 @@ class PeriodicJobs {
 
 	String logInstance
 
+	static int LOG_CACHE_SIZE = 100
+	static SimpleDateFormat df = new SimpleDateFormat('yyyy-MM-dd HH:mm:ss')
+
 	@Autowired(required = false)
 	List<PeriodicJob> multiThreadRunnables
 
@@ -59,43 +66,50 @@ class PeriodicJobs {
 	@ConfigKey("periodicJobs.defaultInitialDelay")
 	Long defaultPeriodicDelay = 300
 
+	// executors
 	ScheduledExecutorService multiThreadExecutor = Executors.newScheduledThreadPool(3)
 	ScheduledExecutorService singleThreadExecutor = Executors.newSingleThreadScheduledExecutor()
 
-	Map<QueuedPeriodicJob, ScheduledFuture<?>> singleThreadJobs = [:]
-	Map<PeriodicJob, ScheduledFuture<?>> multiThreadJobs = [:]
-	Map<InitJob, ScheduledFuture<?>> initJobs = [:]
+	// execution log info
+	Map<QueuedPeriodicJob, ScheduledJobInfo> singleThreadJobs = [:]
+	Map<PeriodicJob, ScheduledJobInfo> multiThreadJobs = [:]
+	Map<InitJob, ScheduledJobInfo> initJobs = [:]
+
+	boolean initialized = false
 
 	@PostConfigured
 	public void init(){
 		if (!enabled){
-			log.warn("Periodic jobs are disabled. To enable remove periodicJobs.enabled or set to true")
+			log.warn('Periodic jobs are disabled. To enable remove periodicJobs.enabled or set to true')
 			return
 		}
-		multiThreadRunnables.each { PeriodicJob job ->
-			if (job.isEnabled()){
-				Long initialDelay = job.initialDelay != null? job.initialDelay : defaultInitialDelay
-				Long periodicDelay = job.periodicDelay != null? job.periodicDelay : defaultPeriodicDelay
-				ScheduledFuture<?> future = multiThreadExecutor.scheduleWithFixedDelay(job.runnable, initialDelay, periodicDelay, TimeUnit.SECONDS)
-				multiThreadJobs.put(job, future)
+
+		boolean needToRun = false
+		synchronized (this){
+			if (!initialized){
+				needToRun = true
+				initialized = true
 			}
+		}
+
+		if (!needToRun){
+			log.warn('Already initialized')
+			return
+		}
+
+		multiThreadRunnables.each { PeriodicJob job ->
+			ScheduledJobInfo jobInfo = createJob(job, multiThreadExecutor)
+			multiThreadJobs.put(job, jobInfo)
 		}
 
 		singleThreadRunnables.each { QueuedPeriodicJob job ->
-			if (job.isEnabled()){
-				Long initialDelay = job.initialDelay != null? job.initialDelay : defaultInitialDelay
-				Long periodicDelay = job.periodicDelay != null? job.periodicDelay : defaultPeriodicDelay
-				ScheduledFuture<?> future = singleThreadExecutor.scheduleWithFixedDelay(job.runnable, initialDelay, periodicDelay, TimeUnit.SECONDS)
-				singleThreadJobs.put(job, future)
-			}
+			ScheduledJobInfo jobInfo = createJob(job, singleThreadExecutor)
+			singleThreadJobs.put(job, jobInfo)
 		}
 
 		initRunnables.each { InitJob job ->
-			if (job.isEnabled()){
-				Long initialDelay = job.initialDelay != null? job.initialDelay : defaultInitialDelay
-				ScheduledFuture<?> future = singleThreadExecutor.schedule(job.runnable, initialDelay, TimeUnit.SECONDS)
-				initJobs.put(job, future)
-			}
+			ScheduledJobInfo jobInfo = createJob(job, singleThreadExecutor)
+			initJobs.put(job, jobInfo)
 		}
 
 		logInstance  = this.toString()
@@ -109,9 +123,12 @@ class PeriodicJobs {
 	/**
 	 * Cancels given gob. If job is running, will wait for job to finish.
 	 * If there is a need to cancel job even if its still running, use getFuture() method.
+	 *
+	 * Cancelled job cannot be restarted.
+	 *
 	 * @param job job to cancel. Has to be one of supported job interfaces.
 	 */
-	public void cancelJob(Object job){
+	public void cancelJob(AbstractJob job){
 		getFuture(job)?.cancel(false)
 	}
 
@@ -121,7 +138,74 @@ class PeriodicJobs {
 	 * @param job
 	 * @return
 	 */
-	public ScheduledFuture<?> getFuture(Object job){
+	public ScheduledFuture<?> getFuture(AbstractJob job){
+		return getJobInfo(job)?.future
+	}
+
+	public Map<Date, ExecutionEvent> getExecutionLog(AbstractJob job){
+		return getJobInfo(job)?.executions?.asMap()
+	}
+
+	protected ScheduledJobInfo getJobInfo(AbstractJob job){
 		return multiThreadJobs.get(job)?: (singleThreadJobs.get(job)?: initJobs.get(job))
+	}
+
+	@CompileStatic(TypeCheckingMode.SKIP)
+	protected ScheduledJobInfo createJob(AbstractJob job, ScheduledExecutorService executor){
+		ScheduledJobInfo jobInfo = new ScheduledJobInfo()
+		Cache<Date, ExecutionEvent> cache = CacheBuilder.newBuilder().maximumSize(LOG_CACHE_SIZE).build()
+		jobInfo.executions = cache  // cant do this assignment with CompileStatic on (o_0)
+
+		if (!job.isEnabled()){
+			log.debug("Job ${job} will not be schedules because it is disabled.")
+		}else{
+			scheduleJob(job, executor, jobInfo)
+		}
+
+		return jobInfo
+	}
+
+	@CompileStatic(TypeCheckingMode.SKIP)
+	protected void scheduleJob(AbstractJob job, ScheduledExecutorService executor, ScheduledJobInfo into){
+		ScheduledJobInfo jobInfo = into
+		Closure wrapper = {
+			ExecutionEvent event = new ExecutionEvent(start: new Date())
+			jobInfo.executions.put(event.start, event)
+			// TODO if disabled - skip execution
+			try{
+				job.runnable.run()
+			}catch (Throwable error){
+				event.error = error
+			}
+			event.finish = new Date()
+		}
+
+		Long initialDelay = job.initialDelay != null? job.initialDelay : defaultInitialDelay
+		if (job instanceof AbstractPeriodicJob){
+			Long periodicDelay = ((AbstractPeriodicJob)job).periodicDelay != null? ((AbstractPeriodicJob)job).periodicDelay : defaultPeriodicDelay
+			jobInfo.future = executor.scheduleWithFixedDelay(wrapper, initialDelay, periodicDelay, TimeUnit.SECONDS)
+		}else{
+			jobInfo.future = executor.schedule(wrapper, initialDelay, TimeUnit.SECONDS)
+		}
+	}
+
+	class ScheduledJobInfo{
+		ScheduledFuture<?> future;
+		Cache<Date, ExecutionEvent> executions;
+	}
+
+	class ExecutionEvent {
+		Date start
+		Date finish
+		Throwable error
+		String getLogMessage(){
+			if (error){
+				return "${df.format(start)} - job has resulted in ${error.class.simpleName}: ${error.getMessage()} at ${df.format(finish)}"
+			}else if (finish == null){
+				return "${df.format(start)} - job is still running..."
+			}else{
+				return "${df.format(start)} - ${df.format(finish)}"
+			}
+		}
 	}
 }

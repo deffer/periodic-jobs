@@ -19,7 +19,13 @@ class LocalTest {
 	@Inject PeriodicJobs executor
 	@Inject BasicJob basicJob
 	@Inject DisabledJob disabledJob
+	@Inject BrokenJob brokenJob
 	@Inject StickyBootstrap bootstrap
+
+	@Before
+	public void init() {
+		bootstrap.start()
+	}
 
 	@Test
 	public void testJobs(){
@@ -30,11 +36,29 @@ class LocalTest {
 		}
 		assert basicJob.count >= 2
 		assert disabledJob.count==0
+
+		// make sure disabled job is registered by not scheduled
+		assert executor.getFuture(disabledJob) == null
+		assert executor.getExecutionLog(disabledJob).isEmpty()
+
+		// normal job should have few successful executions with non-empty finish time
+		def logs = executor.getExecutionLog(basicJob).collect {key, value-> return value}.sort { return it.start }
+		assert logs.size() >= 2
+
+		for (PeriodicJobs.ExecutionEvent event : logs){
+			assert event.finish != null
+			assert event.error == null
+		}
+
+		// broken job should have execution with logged error, but should continue running
+		PeriodicJobs.ExecutionEvent brokenExecution = executor.getExecutionLog(brokenJob).values().find {
+			it.error != null
+		}
+
+		assert  brokenExecution != null
+		assert brokenExecution.logMessage // just to make sure this methods is null-pointer safe
+		assert (brokenExecution.finish.time - brokenExecution.start.time) >= BrokenJob.waitTime
+		assert !(executor.getFuture(brokenJob).isDone())
 	}
 
-
-	@Before
-	public void init() {
-		bootstrap.start()
-	}
 }
