@@ -152,7 +152,7 @@ class PeriodicJobs {
 
 	@CompileStatic(TypeCheckingMode.SKIP)
 	protected ScheduledJobInfo createJob(AbstractJob job, ScheduledExecutorService executor){
-		ScheduledJobInfo jobInfo = new ScheduledJobInfo()
+		ScheduledJobInfo jobInfo = new ScheduledJobInfo(job:job)
 		Cache<Date, ExecutionEvent> cache = CacheBuilder.newBuilder().maximumSize(LOG_CACHE_SIZE).build()
 		jobInfo.executions = cache  // cant do this assignment with CompileStatic on (o_0)
 
@@ -190,8 +190,22 @@ class PeriodicJobs {
 	}
 
 	class ScheduledJobInfo{
+		AbstractJob job
 		ScheduledFuture<?> future;
 		Cache<Date, ExecutionEvent> executions;
+
+		boolean isPeriodic(){
+			return job instanceof AbstractPeriodicJob
+		}
+
+		Long getPeriodicDelay(){
+			if (isPeriodic()){
+				Long delay = ((AbstractPeriodicJob)job).periodicDelay
+				return delay ?: defaultPeriodicDelay
+			}else{
+				return null
+			}
+		}
 	}
 
 	class ExecutionEvent {
