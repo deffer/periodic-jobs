@@ -20,11 +20,10 @@ class LocalTest {
 	@Inject BasicJob basicJob
 	@Inject DisabledJob disabledJob
 	@Inject BrokenJob brokenJob
-	@Inject StickyBootstrap bootstrap
 
 	@Before
 	public void init() {
-		bootstrap.start()
+
 	}
 
 	@Test
