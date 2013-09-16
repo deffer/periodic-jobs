@@ -120,6 +120,11 @@ class PeriodicJobs {
 		log.info("${multiThreadJobs.size()} normal jobs, ${singleThreadJobs.size()} queued jobs and ${initJobs.size()} init jobs registered. Instance: $logInstance")
 	}
 
+	@CompileStatic(TypeCheckingMode.SKIP)
+	public List<ScheduledJobInfo> listAllJobs(){
+		return [] + multiThreadJobs.values() + singleThreadJobs.values() + initJobs.values()
+	}
+
 	/**
 	 * Cancels given gob. If job is running, will wait for job to finish.
 	 * If there is a need to cancel job even if its still running, use getFuture() method.
@@ -201,10 +206,21 @@ class PeriodicJobs {
 		Long getPeriodicDelay(){
 			if (isPeriodic()){
 				Long delay = ((AbstractPeriodicJob)job).periodicDelay
-				return delay ?: defaultPeriodicDelay
+				return delay!=null ? delay : defaultPeriodicDelay
 			}else{
 				return null
 			}
+		}
+
+		String getJobType(){
+			if (job instanceof PeriodicJob)
+				return 'Periodic'
+			else if (job instanceof QueuedPeriodicJob)
+				return 'Queued'
+			else if (job instanceof InitJob)
+				return 'Init'
+			else
+				return 'Unknown'
 		}
 	}
 
