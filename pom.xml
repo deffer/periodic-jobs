@@ -1,17 +1,17 @@
 <?xml version="1.0"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<parent>
-		<groupId>nz.ac.auckland</groupId>
-		<artifactId>uoa-groovy-parent</artifactId>
-		<version>3.12</version>
+		<groupId>nz.ac.auckland.groupapps.parent</groupId>
+		<artifactId>parent-groovy-groupapps-central</artifactId>
+		<version>1.2</version>
 	</parent>
-	<groupId>nz.ac.auckland.simple</groupId>
+
+	<groupId>nz.ac.auckland.jobs</groupId>
 	<artifactId>periodic-jobs</artifactId>
 	<packaging>jar</packaging>
 	<name>periodic-jobs</name>
-	<version>2.1-SNAPSHOT</version>
+	<version>3.3-SNAPSHOT</version>
 
 	<description>
 		Simple scheduler for periodic jobs. Requires Spring.
@@ -20,10 +20,17 @@
 		<url>https://github.com/deffer/periodic-jobs</url>
 		<connection>scm:git:https://github.com/deffer/periodic-jobs.git</connection>
 		<developerConnection>scm:git:git@github.com:deffer/periodic-jobs.git</developerConnection>
+		<tag>HEAD</tag>
 	</scm>
 
 
 	<dependencies>
+
+		<dependency>
+			<groupId>com.google.guava</groupId>
+			<artifactId>guava</artifactId>
+			<version>[15,)</version>
+		</dependency>
 
 		<dependency>
 			<groupId>nz.ac.auckland.common</groupId>
@@ -34,7 +41,7 @@
 		<dependency>
 			<groupId>nz.ac.auckland.common</groupId>
 			<artifactId>common-configuration</artifactId>
-			<version>[2.5,)</version>
+			<version>[3,)</version>
 		</dependency>
 
 		<dependency>

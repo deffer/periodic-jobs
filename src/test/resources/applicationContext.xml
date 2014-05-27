@@ -9,7 +9,6 @@
 
     <!-- make sure to have annotations for spring enabled -->
     <context:annotation-config />
-    <context:component-scan base-package="nz.ac.auckland.simple" />
 
     <!-- import spring components from other UoA packages -->
     <import resource="classpath*:META-INF/uoa/spring-*.xml"/>

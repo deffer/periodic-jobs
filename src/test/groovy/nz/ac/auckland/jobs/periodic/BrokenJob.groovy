@@ -1,14 +1,18 @@
-package nz.ac.auckland.simple
+package nz.ac.auckland.jobs.periodic
 
 import nz.ac.auckland.common.stereotypes.UniversityComponent
 
 @UniversityComponent
-class DisabledJob  implements PeriodicJob{
+class BrokenJob implements PeriodicJob{
 
 	int count = 0
 
+	static long waitTime = 1100
+
 	protected void execute(){
 		count ++
+		Thread.sleep(waitTime)
+		throw new NullPointerException('Ooops...')
 	}
 
 	@Override
@@ -28,6 +32,6 @@ class DisabledJob  implements PeriodicJob{
 
 	@Override
 	Boolean isEnabled() {
-		return false
+		return true
 	}
 }

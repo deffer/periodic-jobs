@@ -1,14 +1,13 @@
-package nz.ac.auckland.simple
+package nz.ac.auckland.jobs.periodic
 
 /**
- * Init jobs are executed only once and on the same thread as queued periodic jobs.
+ * This is base interface for other jobs.
  */
-public interface InitJob {
-
+interface AbstractJob {
 	/**
-	 * Method to run
-	 * @return
-	 */
+    * Method to run
+    * @return
+    */
 	Runnable getRunnable()
 
 	/**
