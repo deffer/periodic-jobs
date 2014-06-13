@@ -2,6 +2,8 @@ package nz.ac.auckland.jobs.periodic
 
 /**
  * This is base interface for other jobs.
+ *
+ * @deprecated periodic delay is set in @JobConfiguration now
  */
 interface AbstractPeriodicJob extends AbstractJob{
 

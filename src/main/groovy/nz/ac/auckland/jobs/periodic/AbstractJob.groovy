@@ -2,13 +2,16 @@ package nz.ac.auckland.jobs.periodic
 
 /**
  * This is base interface for other jobs.
+ *
+ * @deprecated switch to using Job with @JobConfiguration annotation
  */
-interface AbstractJob {
+interface AbstractJob{
 	/**
-    * Method to run
-    * @return
-    */
+	 * Method to run
+	 * @return
+	 */
 	Runnable getRunnable()
+
 
 	/**
 	 * Initial delay before first execution in seconds

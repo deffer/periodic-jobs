@@ -6,6 +6,7 @@ import groovy.transform.TypeCheckingMode
 import net.stickycode.stereotype.configured.PostConfigured
 import nz.ac.auckland.common.config.ConfigKey
 import nz.ac.auckland.common.stereotypes.UniversityComponent
+import nz.ac.auckland.jobs.periodic.depr.WrapperFactory
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
@@ -75,7 +76,7 @@ class PeriodicJobs {
 	Map<PeriodicJob, ScheduledJobInfo> multiThreadJobs = [:]
 	Map<InitJob, ScheduledJobInfo> initJobs = [:]
 
-	boolean initialized = false
+	boolean initialized = false // spring calls init() several times, so we need to make sure we only initialize once
 
 	@PostConfigured
 	public void init(){
@@ -194,33 +195,76 @@ class PeriodicJobs {
 		}
 	}
 
+	/**
+	 * All information about certain job as collected at runtime (configuration read from properties,
+	 *   types of the job derived from configuration, scheduled future)
+	 */
 	class ScheduledJobInfo{
 		AbstractJob job
+		AbstractJob wrapper
+
 		ScheduledFuture<?> future;
 		Cache<Date, ExecutionEvent> executions;
 
+		Job instance
+		boolean privileged
+		boolean isPeriodic
+		long delay
+		long initialDelay
+		boolean enabled
+		String cron
+
+
+		AbstractJob getJob(){
+			if (job)
+				return job
+			else{
+				if (!wrapper)
+					wrapper = WrapperFactory.wrapJob(this)
+				return wrapper
+			}
+		}
+
 		boolean isPeriodic(){
-			return job instanceof AbstractPeriodicJob
+			if (this.job)
+				return job instanceof AbstractPeriodicJob
+			else{
+				return isPeriodic
+			}
 		}
 
 		Long getPeriodicDelay(){
-			if (isPeriodic()){
-				Long delay = ((AbstractPeriodicJob)job).periodicDelay
-				return delay!=null ? delay : defaultPeriodicDelay
-			}else{
+			if (isPeriodic()) {
+				if (this.job) {
+					Long delay = ((AbstractPeriodicJob) job).periodicDelay
+					return delay != null ? delay : defaultPeriodicDelay
+				} else {
+					return delay
+				}
+			} else {
 				return null
 			}
 		}
 
 		String getJobType(){
-			if (job instanceof PeriodicJob)
-				return 'Periodic'
-			else if (job instanceof QueuedPeriodicJob)
-				return 'Queued'
-			else if (job instanceof InitJob)
-				return 'Init'
-			else
-				return 'Unknown'
+			if (job){
+				if (job instanceof PeriodicJob)
+					return 'Periodic'
+				else if (job instanceof QueuedPeriodicJob)
+					return 'Queued'
+				else if (job instanceof InitJob)
+					return 'Init'
+				else
+					return 'Unknown'
+			}else{
+				String result = "Init"
+				if (!periodic){
+					result = "Periodic" + cron?" (cron)" : ""
+				}
+				if (privileged)
+					result+= "(privileged)"
+				return result
+			}
 		}
 	}
 
