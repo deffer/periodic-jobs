@@ -19,7 +19,7 @@ public @interface DefaultConfiguration {
 	boolean enabled() default true
 
 
-	long initialDelay() default 5
+	long initialDelay() default 5l
 
 	/**
 	 * A simplest way to define a periodic job (without using cron rules). Sets a delay between job executions
@@ -29,5 +29,5 @@ public @interface DefaultConfiguration {
 	 *
 	 * @return delay between job executions (between end of previous job and start of next job) in seconds.
 	 */
-	long delay() default 300
+	long delay() default 300l
 }

@@ -58,6 +58,9 @@ class PeriodicJobs {
 	@Autowired(required = false)
 	List<InitJob> initRunnables
 
+	@Autowired(required = false)
+	List<Job> runnables
+
 	@ConfigKey("periodicJobs.enabled")
 	Boolean enabled = true
 
@@ -76,8 +79,11 @@ class PeriodicJobs {
 	Map<PeriodicJob, ScheduledJobInfo> multiThreadJobs = [:]
 	Map<InitJob, ScheduledJobInfo> initJobs = [:]
 
+	Map<Job, ScheduledJobInfo> jobs = [:]
+
 	boolean initialized = false // spring calls init() several times, so we need to make sure we only initialize once
 
+	@CompileStatic(TypeCheckingMode.SKIP)
 	@PostConfigured
 	public void init(){
 		if (!enabled){
@@ -113,12 +119,25 @@ class PeriodicJobs {
 			initJobs.put(job, jobInfo)
 		}
 
+		List<Job> deprecatedJobs = [] + multiThreadRunnables + singleThreadRunnables + initRunnables
+		runnables.each {Job job ->
+			if (!(job in deprecatedJobs)){
+				ScheduledJobInfo jobInfo = createJob(job)
+				jobs.put(job, jobInfo)
+			}
+		}
+
 		logInstance  = this.toString()
 		if (logInstance.indexOf('@')>0){
 			logInstance = logInstance.split('@').last()
 		}
 
-		log.info("${multiThreadJobs.size()} normal jobs, ${singleThreadJobs.size()} queued jobs and ${initJobs.size()} init jobs registered. Instance: $logInstance")
+		String message = ""
+		if (deprecatedJobs) message+= "${multiThreadJobs.size()} normal jobs, ${singleThreadJobs.size()} queued jobs and ${initJobs.size()} init jobs found (deprecated)."
+		if (jobs) message += " ${jobs.size()} jobs found."
+		if (!message) message = "No jobs found."
+
+		log.info(message+" Instance: $logInstance")
 	}
 
 	@CompileStatic(TypeCheckingMode.SKIP)
@@ -163,7 +182,7 @@ class PeriodicJobs {
 		jobInfo.executions = cache  // cant do this assignment with CompileStatic on (o_0)
 
 		if (!job.isEnabled()){
-			log.debug("Job ${job} will not be schedules because it is disabled.")
+			log.debug("Deprecated job ${job} will not be schedules because it is disabled.")
 		}else{
 			scheduleJob(job, executor, jobInfo)
 		}
@@ -172,12 +191,30 @@ class PeriodicJobs {
 	}
 
 	@CompileStatic(TypeCheckingMode.SKIP)
-	protected void scheduleJob(AbstractJob job, ScheduledExecutorService executor, ScheduledJobInfo into){
+	protected ScheduledJobInfo createJob(Job job){
+		ScheduledJobInfo jobInfo = new ScheduledJobInfo(instance: job)
+		// TODO parse annotations, read properties
+
+
+		if (!jobInfo.enabled){
+			log.debug("Job ${job} will not be schedules because it is disabled.")
+		}else{
+			Cache<Date, ExecutionEvent> cache = CacheBuilder.newBuilder().maximumSize(LOG_CACHE_SIZE).build()
+			jobInfo.executions = cache  // cant do this assignment with CompileStatic on (o_0)
+
+			scheduleJob(job, jobInfo.isPrivileged()?singleThreadExecutor:multiThreadExecutor, jobInfo)
+		}
+
+		return jobInfo
+	}
+
+	@CompileStatic(TypeCheckingMode.SKIP)
+	protected void scheduleJob(Job job, ScheduledExecutorService executor, ScheduledJobInfo into){
 		ScheduledJobInfo jobInfo = into
 		Closure wrapper = {
 			ExecutionEvent event = new ExecutionEvent(start: new Date())
 			jobInfo.executions.put(event.start, event)
-			// TODO if disabled - skip execution
+			// TODO if its cron and initial delay has not passed yet, skip execution
 			try{
 				job.runnable.run()
 			}catch (Throwable error){
@@ -186,12 +223,14 @@ class PeriodicJobs {
 			event.finish = new Date()
 		}
 
-		Long initialDelay = job.initialDelay != null? job.initialDelay : defaultInitialDelay
-		if (job instanceof AbstractPeriodicJob){
-			Long periodicDelay = ((AbstractPeriodicJob)job).periodicDelay != null? ((AbstractPeriodicJob)job).periodicDelay : defaultPeriodicDelay
-			jobInfo.future = executor.scheduleWithFixedDelay(wrapper, initialDelay, periodicDelay, TimeUnit.SECONDS)
+		if (jobInfo.cron){
+			 // TODO schedule cron job
 		}else{
-			jobInfo.future = executor.schedule(wrapper, initialDelay, TimeUnit.SECONDS)
+			if (jobInfo.isPeriodic()){
+				jobInfo.future = executor.scheduleWithFixedDelay(wrapper, jobInfo.getInitialDelay(), jobInfo.getPeriodicDelay(), TimeUnit.SECONDS)
+			}else{
+				jobInfo.future = executor.schedule(wrapper, jobInfo.getPeriodicDelay(), TimeUnit.SECONDS)
+			}
 		}
 	}
 
@@ -233,11 +272,20 @@ class PeriodicJobs {
 			}
 		}
 
+		Long getInitialDelay(){
+			if (this.job) {
+				Long result = job.initialDelay
+				return result?: defaultInitialDelay
+			} else {
+				return initialDelay
+			}
+		}
+
 		Long getPeriodicDelay(){
 			if (isPeriodic()) {
 				if (this.job) {
-					Long delay = ((AbstractPeriodicJob) job).periodicDelay
-					return delay != null ? delay : defaultPeriodicDelay
+					Long result = ((AbstractPeriodicJob) job).periodicDelay
+					return result?: defaultPeriodicDelay
 				} else {
 					return delay
 				}
