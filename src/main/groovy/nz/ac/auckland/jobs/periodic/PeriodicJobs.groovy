@@ -40,7 +40,7 @@ import groovy.transform.CompileStatic
  */
 @CompileStatic
 @UniversityComponent
-class PeriodicJobs {
+class PeriodicJobs extends DeprecatedPeriodicJobs {
 
 	private Logger log = LoggerFactory.getLogger(PeriodicJobs.class)
 
@@ -48,15 +48,6 @@ class PeriodicJobs {
 
 	static int LOG_CACHE_SIZE = 100
 	static SimpleDateFormat df = new SimpleDateFormat('yyyy-MM-dd HH:mm:ss')
-
-	@Autowired(required = false)
-	List<PeriodicJob> multiThreadRunnables
-
-	@Autowired(required = false)
-	List<QueuedPeriodicJob> singleThreadRunnables
-
-	@Autowired(required = false)
-	List<InitJob> initRunnables
 
 	@Autowired(required = false)
 	List<Job> runnables
@@ -73,11 +64,6 @@ class PeriodicJobs {
 	// executors
 	ScheduledExecutorService multiThreadExecutor = Executors.newScheduledThreadPool(3)
 	ScheduledExecutorService singleThreadExecutor = Executors.newSingleThreadScheduledExecutor()
-
-	// execution log info
-	Map<QueuedPeriodicJob, ScheduledJobInfo> singleThreadJobs = [:]
-	Map<PeriodicJob, ScheduledJobInfo> multiThreadJobs = [:]
-	Map<InitJob, ScheduledJobInfo> initJobs = [:]
 
 	Map<Job, ScheduledJobInfo> jobs = [:]
 
@@ -167,18 +153,45 @@ class PeriodicJobs {
 		return getJobInfo(job)?.future
 	}
 
-	public Map<Date, ExecutionEvent> getExecutionLog(AbstractJob job){
+	public Map<Date, ScheduledJobEvent> getExecutionLog(Job job){
 		return getJobInfo(job)?.executions?.asMap()
 	}
 
+	/**
+	 * Only returns deprecated jobs
+	 * @param job
+	 * @return
+	 */
+	@CompileStatic(TypeCheckingMode.SKIP)
+	public Map<Date, ExecutionEvent> getExecutionLog(AbstractJob job){
+		Map<Date, ExecutionEvent> result = [:]
+		getJobInfo(job)?.executions?.asMap()?.each{Date k, ScheduledJobEvent v ->
+			if (v instanceof ExecutionEvent)
+				result.put(k, v as ExecutionEvent)
+		}
+		return result
+	}
+
+	/**
+	 *
+	 * @param job
+	 * @return
+	 * @deprecated
+	 */
+	@CompileStatic(TypeCheckingMode.SKIP)
 	protected ScheduledJobInfo getJobInfo(AbstractJob job){
-		return multiThreadJobs.get(job)?: (singleThreadJobs.get(job)?: initJobs.get(job))
+		ScheduledJob result = multiThreadJobs.get(job)?: (singleThreadJobs.get(job)?: initJobs.get(job))
+		return result as ScheduledJobInfo
+	}
+
+	protected ScheduledJob getJobInfo(job){
+		return jobs.get(job)
 	}
 
 	@CompileStatic(TypeCheckingMode.SKIP)
 	protected ScheduledJobInfo createJob(AbstractJob job, ScheduledExecutorService executor){
 		ScheduledJobInfo jobInfo = new ScheduledJobInfo(job:job)
-		Cache<Date, ExecutionEvent> cache = CacheBuilder.newBuilder().maximumSize(LOG_CACHE_SIZE).build()
+		Cache<Date, ScheduledJobEvent> cache = CacheBuilder.newBuilder().maximumSize(LOG_CACHE_SIZE).build()
 		jobInfo.executions = cache  // cant do this assignment with CompileStatic on (o_0)
 
 		if (!job.isEnabled()){
@@ -199,7 +212,7 @@ class PeriodicJobs {
 		if (!jobInfo.enabled){
 			log.debug("Job ${job} will not be schedules because it is disabled.")
 		}else{
-			Cache<Date, ExecutionEvent> cache = CacheBuilder.newBuilder().maximumSize(LOG_CACHE_SIZE).build()
+			Cache<Date, ScheduledJobEvent> cache = CacheBuilder.newBuilder().maximumSize(LOG_CACHE_SIZE).build()
 			jobInfo.executions = cache  // cant do this assignment with CompileStatic on (o_0)
 
 			scheduleJob(job, jobInfo.isPrivileged()?singleThreadExecutor:multiThreadExecutor, jobInfo)
@@ -213,7 +226,8 @@ class PeriodicJobs {
 		ScheduledJobInfo jobInfo = into
 		Closure wrapper = {
 			ExecutionEvent event = new ExecutionEvent(start: new Date())
-			jobInfo.executions.put(event.start, event)
+			jobInfo.addExecution(event.start, event)
+			log.debug("Job running: ${jobInfo.class.name}")
 			// TODO if its cron and initial delay has not passed yet, skip execution
 			try{
 				job.runnable.run()
@@ -235,99 +249,20 @@ class PeriodicJobs {
 	}
 
 	/**
-	 * All information about certain job as collected at runtime (configuration read from properties,
-	 *   types of the job derived from configuration, scheduled future)
+	 * @deprecated
 	 */
-	class ScheduledJobInfo{
-		AbstractJob job
-		AbstractJob wrapper
+	class ScheduledJobInfo extends ScheduledJob{
 
-		ScheduledFuture<?> future;
-		Cache<Date, ExecutionEvent> executions;
-
-		Job instance
-		boolean privileged
-		boolean isPeriodic
-		long delay
-		long initialDelay
-		boolean enabled
-		String cron
-
-
-		AbstractJob getJob(){
-			if (job)
-				return job
-			else{
-				if (!wrapper)
-					wrapper = WrapperFactory.wrapJob(this)
-				return wrapper
-			}
-		}
-
-		boolean isPeriodic(){
-			if (this.job)
-				return job instanceof AbstractPeriodicJob
-			else{
-				return isPeriodic
-			}
-		}
-
-		Long getInitialDelay(){
-			if (this.job) {
-				Long result = job.initialDelay
-				return result?: defaultInitialDelay
-			} else {
-				return initialDelay
-			}
-		}
-
-		Long getPeriodicDelay(){
-			if (isPeriodic()) {
-				if (this.job) {
-					Long result = ((AbstractPeriodicJob) job).periodicDelay
-					return result?: defaultPeriodicDelay
-				} else {
-					return delay
-				}
-			} else {
-				return null
-			}
-		}
-
-		String getJobType(){
-			if (job){
-				if (job instanceof PeriodicJob)
-					return 'Periodic'
-				else if (job instanceof QueuedPeriodicJob)
-					return 'Queued'
-				else if (job instanceof InitJob)
-					return 'Init'
-				else
-					return 'Unknown'
-			}else{
-				String result = "Init"
-				if (!periodic){
-					result = "Periodic" + cron?" (cron)" : ""
-				}
-				if (privileged)
-					result+= "(privileged)"
-				return result
+		protected void addExecution(Date date, ExecutionEvent event){
+			try{
+				this.@executions.put(date, event)
+			}catch (Exception e){
+				e.printStackTrace()
 			}
 		}
 	}
 
-	class ExecutionEvent {
-		Date start
-		Date finish
-		Throwable error
-		String getLogMessage(){
-			if (error){
-				return "${df.format(start)} - job has resulted in ${error.class.simpleName}: ${error.getMessage()} at ${df.format(finish)}"
-			}else if (finish == null){
-				return "${df.format(start)} - job is still running..."
-			}else{
-				return "${df.format(start)} - ${df.format(finish)}"
-			}
-		}
+	class ExecutionEvent extends ScheduledJobEvent{
+
 	}
 }

@@ -12,7 +12,10 @@ import org.springframework.test.context.ContextConfiguration
 import javax.inject.Inject
 import java.util.concurrent.ScheduledFuture
 
-
+/**
+ *
+ * author: Irina Benediktovich - http://plus.google.com/+IrinaBenediktovich
+ */
 @ContextConfiguration("classpath:/applicationContext.xml")
 @RunWith(GroupAppsSpringTestRunner)
 class LocalTest {
@@ -27,7 +30,7 @@ class LocalTest {
 	}
 
 	@Test
-	public void testJobs(){
+	public void testDeprecatedJobs(){
 		int count = 0
 		while (basicJob.count<3 && count < 7){
 			Thread.sleep(500)

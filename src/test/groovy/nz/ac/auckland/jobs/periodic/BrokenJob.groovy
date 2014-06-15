@@ -2,15 +2,18 @@ package nz.ac.auckland.jobs.periodic
 
 import nz.ac.auckland.common.stereotypes.UniversityComponent
 
+/**
+ *
+ * author: Irina Benediktovich - http://plus.google.com/+IrinaBenediktovich
+ * @deprecated
+ */
 @UniversityComponent
-class BrokenJob implements PeriodicJob{
-
-	int count = 0
+class BrokenJob extends Counter implements PeriodicJob{
 
 	static long waitTime = 1100
 
 	protected void execute(){
-		count ++
+		super.execute()
 		Thread.sleep(waitTime)
 		throw new NullPointerException('Ooops...')
 	}

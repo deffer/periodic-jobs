@@ -12,16 +12,17 @@ import org.slf4j.LoggerFactory
 @NamedJob("reindexingJob") // lets configure job in property file
 @DefaultConfiguration(delay = 50l) // if there is no property file (during development for instance)
 @UniversityComponent
-class AnnotatedPeriodicVIPJob implements Job{
+class AnnotatedPeriodicVIPJob extends Counter implements Job{
 
 	private Logger log = LoggerFactory.getLogger(AnnotatedPeriodicVIPJob)
 
 	@Override
 	Runnable getRunnable() {
-		return this.&doit
+		return this.&execute
 	}
 
-	public void doit(){
-		log.debug("Running AnnotatedPeriodicVIPJob. Finished.")
+	protected void execute(){
+		super.execute()
+		log.debug("AnnotatedPeriodicVIPJob run cycle $count")
 	}
 }

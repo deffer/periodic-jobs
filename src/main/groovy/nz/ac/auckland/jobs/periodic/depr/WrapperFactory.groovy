@@ -3,6 +3,7 @@ package nz.ac.auckland.jobs.periodic.depr
 import nz.ac.auckland.jobs.periodic.AbstractJob
 import nz.ac.auckland.jobs.periodic.Job
 import nz.ac.auckland.jobs.periodic.PeriodicJobs
+import nz.ac.auckland.jobs.periodic.ScheduledJob
 
 /**
  *
@@ -10,7 +11,7 @@ import nz.ac.auckland.jobs.periodic.PeriodicJobs
  */
 class WrapperFactory {
 
-	public static AbstractJob wrapJob(PeriodicJobs.ScheduledJobInfo job){
+	public static AbstractJob wrapJob(ScheduledJob job){
 
 	}
 }

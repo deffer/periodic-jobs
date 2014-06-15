@@ -2,15 +2,23 @@ package nz.ac.auckland.jobs.periodic
 
 import nz.ac.auckland.common.stereotypes.UniversityComponent
 import nz.ac.auckland.jobs.periodic.PeriodicJob
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 
+/**
+ *
+ * author: Irina Benediktovich - http://plus.google.com/+IrinaBenediktovich
+ * @deprecated
+ */
 @UniversityComponent
-class BasicJob implements PeriodicJob{
+class BasicJob extends Counter implements PeriodicJob{
 
-	int count = 0
+	private Logger log = LoggerFactory.getLogger(BasicJob)
 
 	protected void execute(){
-		count ++
+		super.execute()
+		log.debug("Basic job run cycle $count")
 	}
 
 	@Override

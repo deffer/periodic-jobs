@@ -10,14 +10,12 @@ import org.slf4j.LoggerFactory
  */
 @DefaultConfiguration(enabled = false)
 @UniversityComponent
-class AnnotatedDisabledJob implements Job{
+class AnnotatedDisabledJob extends Counter implements Job{
 
 	private Logger log = LoggerFactory.getLogger(AnnotatedDisabledJob)
 
-	int count = 0
-
 	protected void execute(){
-		count ++
+		super.execute()
 		log.debug("Finished AnnotatedDisabledJob, cycle $count")
 	}
 

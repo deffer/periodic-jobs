@@ -3,14 +3,13 @@ package nz.ac.auckland.jobs.periodic
 import nz.ac.auckland.common.stereotypes.UniversityComponent
 import nz.ac.auckland.jobs.periodic.PeriodicJob
 
+/**
+ *
+ * author: Irina Benediktovich - http://plus.google.com/+IrinaBenediktovich
+ * @deprecated
+ */
 @UniversityComponent
-class DisabledJob  implements PeriodicJob{
-
-	int count = 0
-
-	protected void execute(){
-		count ++
-	}
+class DisabledJob extends Counter implements PeriodicJob{
 
 	@Override
 	Runnable getRunnable() {
