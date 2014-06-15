@@ -90,20 +90,7 @@ class PeriodicJobs extends DeprecatedPeriodicJobs {
 			return
 		}
 
-		multiThreadRunnables.each { PeriodicJob job ->
-			ScheduledJobInfo jobInfo = createJob(job, multiThreadExecutor)
-			multiThreadJobs.put(job, jobInfo)
-		}
-
-		singleThreadRunnables.each { QueuedPeriodicJob job ->
-			ScheduledJobInfo jobInfo = createJob(job, singleThreadExecutor)
-			singleThreadJobs.put(job, jobInfo)
-		}
-
-		initRunnables.each { InitJob job ->
-			ScheduledJobInfo jobInfo = createJob(job, singleThreadExecutor)
-			initJobs.put(job, jobInfo)
-		}
+		initDeprecatedJobs(this.&createDeprecatedJob, multiThreadExecutor, singleThreadExecutor)
 
 		List<Job> deprecatedJobs = [] + multiThreadRunnables + singleThreadRunnables + initRunnables
 		runnables.each {Job job ->
@@ -118,17 +105,26 @@ class PeriodicJobs extends DeprecatedPeriodicJobs {
 			logInstance = logInstance.split('@').last()
 		}
 
-		String message = ""
-		if (deprecatedJobs) message+= "${multiThreadJobs.size()} normal jobs, ${singleThreadJobs.size()} queued jobs and ${initJobs.size()} init jobs found (deprecated)."
+		String message = reportJobs()
 		if (jobs) message += " ${jobs.size()} jobs found."
-		if (!message) message = "No jobs found."
 
-		log.info(message+" Instance: $logInstance")
+		log.info(message?:"No jobs found." + " Instance: $logInstance")
 	}
 
+	/**
+	 * Only returns deprecated jobs
+	 * @return
+	 * @deprecated use listJobs to see all jobs
+	 */
 	@CompileStatic(TypeCheckingMode.SKIP)
 	public List<ScheduledJobInfo> listAllJobs(){
 		return [] + multiThreadJobs.values() + singleThreadJobs.values() + initJobs.values()
+	}
+
+	public List<ScheduledJob> listJobs(){
+		def result = listAllJobs()
+		result += jobs.values()
+		return result
 	}
 
 	/**
@@ -148,8 +144,19 @@ class PeriodicJobs extends DeprecatedPeriodicJobs {
 	 * ScheduledFuture.isDone() returns true if job has finished and is not scheduled to run again (for instance after periodic task was cancelled).
 	 * @param job
 	 * @return
+	 * @deprecated
 	 */
 	public ScheduledFuture<?> getFuture(AbstractJob job){
+		return getJobInfo(job)?.future
+	}
+
+	/**
+	 * Returns ScheduledFuture attached to given job. Contains some not very useful info.
+	 * ScheduledFuture.isDone() returns true if job has finished and is not scheduled to run again (for instance after periodic task was cancelled).
+	 * @param job
+	 * @return
+	 */
+	public ScheduledFuture<?> getFuture(Job job){
 		return getJobInfo(job)?.future
 	}
 
@@ -158,9 +165,10 @@ class PeriodicJobs extends DeprecatedPeriodicJobs {
 	}
 
 	/**
-	 * Only returns deprecated jobs
+	 *
 	 * @param job
 	 * @return
+	 * @deprecated
 	 */
 	@CompileStatic(TypeCheckingMode.SKIP)
 	public Map<Date, ExecutionEvent> getExecutionLog(AbstractJob job){
@@ -188,11 +196,18 @@ class PeriodicJobs extends DeprecatedPeriodicJobs {
 		return jobs.get(job)
 	}
 
+	/**
+	 *
+	 * @param job
+	 * @param executor
+	 * @return
+	 * @deprecated
+	 */
 	@CompileStatic(TypeCheckingMode.SKIP)
-	protected ScheduledJobInfo createJob(AbstractJob job, ScheduledExecutorService executor){
+	protected ScheduledJob createDeprecatedJob(AbstractJob job, ScheduledExecutorService executor){
 		ScheduledJobInfo jobInfo = new ScheduledJobInfo(job:job)
 		Cache<Date, ScheduledJobEvent> cache = CacheBuilder.newBuilder().maximumSize(LOG_CACHE_SIZE).build()
-		jobInfo.executions = cache  // cant do this assignment with CompileStatic on (o_0)
+		jobInfo.executions = cache
 
 		if (!job.isEnabled()){
 			log.debug("Deprecated job ${job} will not be schedules because it is disabled.")
@@ -262,6 +277,9 @@ class PeriodicJobs extends DeprecatedPeriodicJobs {
 		}
 	}
 
+	/**
+	 * @deprecated
+	 */
 	class ExecutionEvent extends ScheduledJobEvent{
 
 	}
