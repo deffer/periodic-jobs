@@ -9,6 +9,8 @@ import java.lang.annotation.Target
  * Allows to configure delays and 'availability' of the job. In the presence of NamedJob annotation
  *  this configuration can be overridden in the property file.
  *
+ * Hardcoding values 5 and 300, not making them configurable because its not very useful
+ *
  * author: Irina Benediktovich - http://plus.google.com/+IrinaBenediktovich
  */
 @Retention(RetentionPolicy.RUNTIME)
@@ -30,4 +32,9 @@ public @interface DefaultConfiguration {
 	 * @return delay between job executions (between end of previous job and start of next job) in seconds.
 	 */
 	long delay() default 300l
+
+	/**
+	 * For cron type jobs. If set, delay is ignored
+	 */
+	String cron
 }

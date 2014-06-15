@@ -17,11 +17,11 @@ class ScheduledJob {
 	protected Cache<Date, ScheduledJobEvent> executions;
 
 	Job instance
-	boolean privileged
-	boolean isPeriodic
+	boolean privileged = false
+	boolean isPeriodic = true
 	long delay
 	long initialDelay
-	boolean enabled
+	boolean enabled = true
 	String cron
 
 

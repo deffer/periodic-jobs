@@ -11,6 +11,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 
+import java.lang.annotation.Annotation
 import java.text.SimpleDateFormat
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
@@ -222,7 +223,7 @@ class PeriodicJobs extends DeprecatedPeriodicJobs {
 	protected ScheduledJobInfo createJob(Job job){
 		ScheduledJobInfo jobInfo = new ScheduledJobInfo(instance: job)
 		// TODO parse annotations, read properties
-
+		initJob(job, jobInfo)
 
 		if (!jobInfo.enabled){
 			log.debug("Job ${job} will not be schedules because it is disabled.")
@@ -234,6 +235,21 @@ class PeriodicJobs extends DeprecatedPeriodicJobs {
 		}
 
 		return jobInfo
+	}
+
+	protected void initJob(Job job, ScheduledJob into){
+		if (job.class.getAnnotation(Privileged)){
+			into.privileged = true
+		}
+
+		DefaultConfiguration defaultConfig = job.class.getAnnotation(DefaultConfiguration)
+		if (defaultConfig){
+			into.initialDelay = defaultConfig.initialDelay()
+			into.delay = defaultConfig.delay()
+			into.cron = defaultConfig.cron
+		}else{
+			//need to set some default values.... sorta duplication with defaultconfig defaults... dunno
+		}
 	}
 
 	@CompileStatic(TypeCheckingMode.SKIP)
