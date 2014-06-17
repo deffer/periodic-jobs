@@ -17,10 +17,12 @@ class ScheduledJob {
 	protected Cache<Date, ScheduledJobEvent> executions;
 
 	Job instance
+	String name
+	String displayName
 	boolean privileged = false
 	boolean isPeriodic = true
-	long delay
-	long initialDelay
+	protected Long delay
+	protected Long initialDelay
 	boolean enabled = true
 	String cron
 
@@ -43,27 +45,6 @@ class ScheduledJob {
 		}
 	}
 
-	Long getInitialDelay(){
-		if (this.job) {
-			Long result = job.initialDelay
-			return result?: defaultInitialDelay
-		} else {
-			return initialDelay
-		}
-	}
-
-	Long getPeriodicDelay(){
-		if (isPeriodic()) {
-			if (this.job) {
-				Long result = ((AbstractPeriodicJob) job).periodicDelay
-				return result?: defaultPeriodicDelay
-			} else {
-				return delay
-			}
-		} else {
-			return null
-		}
-	}
 
 	String getJobType(){
 		if (job){

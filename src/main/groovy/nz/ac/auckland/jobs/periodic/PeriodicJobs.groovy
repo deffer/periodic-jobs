@@ -121,7 +121,7 @@ class PeriodicJobs extends DeprecatedPeriodicJobs {
 		}
 
 		String message = reportJobs()
-		if (jobs) message += " ${jobs.size()} jobs found."
+		if (jobs) message += " ${jobs.size()} jobs found (new)."
 
 		log.info(message?:"No jobs found." + " Instance: $logInstance")
 	}
@@ -236,7 +236,6 @@ class PeriodicJobs extends DeprecatedPeriodicJobs {
 	@CompileStatic(TypeCheckingMode.SKIP)
 	protected ScheduledJobInfo createJob(Job job){
 		ScheduledJobInfo jobInfo = new ScheduledJobInfo(instance: job)
-		// TODO parse annotations, read properties
 		initJob(job, jobInfo)
 
 		if (!jobInfo.enabled){
@@ -256,23 +255,52 @@ class PeriodicJobs extends DeprecatedPeriodicJobs {
 			into.privileged = true
 		}
 
+
+		Boolean enabled
+		NamedJob named = job.class.getAnnotation(NamedJob)
+		if (named){  // read from properties
+			into.name = named.value()
+			into.displayName = named.displayName()
+			if (into.name && named.propertyConfigurable()){
+				into.delay = readLong(into.name, "delay")
+				into.initialDelay = readLong(into.name, "initialDelay")
+				into.cron = System.getProperty("jobs.${into.name}.cron")
+				enabled = !System.getProperty("jobs.${into.name}.enabled")?.equalsIgnoreCase("false")
+			}
+		}
+
 		DefaultConfiguration defaultConfig = job.class.getAnnotation(DefaultConfiguration)
 		if (defaultConfig){
-			into.initialDelay = defaultConfig.initialDelay()
-			into.delay = defaultConfig.delay()
-			into.cron = defaultConfig.cron
+			if (!into.initialDelay) into.initialDelay = defaultConfig.initialDelay()
+			if (!into.delay) into.delay = defaultConfig.delay()
+			if (!into.cron) into.cron = defaultConfig.cron()
+			if (enabled == null) enabled = defaultConfig.enabled()
 		}else{
-			//need to set some default values.... sorta duplication with defaultconfig defaults... dunno
+			if (!into.cron){
+				if (!into.initialDelay) into.initialDelay = 5l
+				if (!into.delay) into.delay = 300l
+			}
+			if (enabled == null) enabled = true
 		}
+		into.enabled = enabled
+	}
+
+	protected Long readLong(String jobName, String property){
+		String propDelay = System.getProperty("jobs.$jobName.$property")
+		if (propDelay && propDelay.isLong())
+			return propDelay.toLong()
+		else
+			return null
 	}
 
 	@CompileStatic(TypeCheckingMode.SKIP)
 	protected void scheduleJob(Job job, ScheduledExecutorService executor, ScheduledJobInfo into){
 		ScheduledJobInfo jobInfo = into
 		Closure wrapper = {
+			log.debug("Job running: ${job.class.name}")
 			ExecutionEvent event = new ExecutionEvent(start: new Date())
 			jobInfo.addExecution(event.start, event)
-			log.debug("Job running: ${jobInfo.class.name}")
+
 			// TODO if its cron and initial delay has not passed yet, skip execution
 			try{
 				job.runnable.run()
@@ -281,6 +309,8 @@ class PeriodicJobs extends DeprecatedPeriodicJobs {
 			}
 			event.finish = new Date()
 		}
+
+		log.debug("Scheduling job: ${job.class.name} (${into.getInitialDelay()}:${into.getPeriodicDelay()})")
 
 		if (jobInfo.cron){
 			 // TODO schedule cron job
@@ -297,6 +327,27 @@ class PeriodicJobs extends DeprecatedPeriodicJobs {
 	 * @deprecated
 	 */
 	class ScheduledJobInfo extends ScheduledJob{
+		Long getInitialDelay(){
+			if (this.job) {
+				Long result = job.initialDelay
+				return result?: defaultInitialDelay
+			} else {
+				return this.@initialDelay
+			}
+		}
+
+		Long getPeriodicDelay(){
+			if (isPeriodic()) {
+				if (this.job) {
+					Long result = ((AbstractPeriodicJob) job).periodicDelay
+					return result?: defaultPeriodicDelay
+				} else {
+					return this.@delay
+				}
+			} else {
+				return null
+			}
+		}
 
 		protected void addExecution(Date date, ExecutionEvent event){
 			try{

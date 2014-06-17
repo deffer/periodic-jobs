@@ -9,8 +9,8 @@ import org.slf4j.LoggerFactory
  * author: Irina Benediktovich - http://plus.google.com/+IrinaBenediktovich
  */
 @Privileged
-@NamedJob("reindexingJob") // lets configure job in property file
-@DefaultConfiguration(delay = 50l) // if there is no property file (during development for instance)
+@NamedJob("reindexingJob") // lets you configure job in property file
+@DefaultConfiguration(delay = 1l, initialDelay = 1l) // if there is no property file (during development for instance)
 @UniversityComponent
 class AnnotatedPeriodicVIPJob extends Counter implements Job{
 

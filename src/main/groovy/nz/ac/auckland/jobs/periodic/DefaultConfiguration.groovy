@@ -36,5 +36,5 @@ public @interface DefaultConfiguration {
 	/**
 	 * For cron type jobs. If set, delay is ignored
 	 */
-	String cron
+	String cron() default ""
 }
