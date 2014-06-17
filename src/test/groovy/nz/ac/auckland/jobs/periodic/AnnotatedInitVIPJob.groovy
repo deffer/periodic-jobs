@@ -10,7 +10,7 @@ import org.slf4j.LoggerFactory
  */
 @Privileged
 @NamedJob("importDataJob") // lets you configure job in property file
-@DefaultConfiguration(delay = 1l, initialDelay = -1l) // if there is no property file (during development for instance)
+@DefaultConfiguration(delay = -1l, initialDelay = 1l) // if there is no property file (during development for instance)
 @UniversityComponent
 class AnnotatedInitVIPJob extends Counter implements Job{
 
@@ -27,6 +27,6 @@ class AnnotatedInitVIPJob extends Counter implements Job{
 	}
 
 	public boolean assertJobSchedule(boolean vip, long initialDelay, long delay){
-		return vip && delay == 1l && initialDelay < 0
+		return vip && delay <0  && initialDelay == 1
 	}
 }

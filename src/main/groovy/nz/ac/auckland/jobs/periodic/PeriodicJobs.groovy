@@ -283,6 +283,9 @@ class PeriodicJobs extends DeprecatedPeriodicJobs {
 			if (enabled == null) enabled = true
 		}
 		into.enabled = enabled
+
+		if (into.delay < 0)
+			into.isPeriodic = false
 	}
 
 	protected Long readLong(String jobName, String property){
