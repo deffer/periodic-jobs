@@ -308,6 +308,7 @@ class PeriodicJobs extends DeprecatedPeriodicJobs {
 				event.error = error
 			}
 			event.finish = new Date()
+			return jobInfo
 		}
 
 		log.debug("Scheduling job: ${job.class.name} (${into.getInitialDelay()}:${into.getPeriodicDelay()})")
@@ -318,7 +319,7 @@ class PeriodicJobs extends DeprecatedPeriodicJobs {
 			if (jobInfo.isPeriodic()){
 				jobInfo.future = executor.scheduleWithFixedDelay(wrapper, jobInfo.getInitialDelay(), jobInfo.getPeriodicDelay(), TimeUnit.SECONDS)
 			}else{
-				jobInfo.future = executor.schedule(wrapper, jobInfo.getPeriodicDelay(), TimeUnit.SECONDS)
+				jobInfo.future = executor.schedule(wrapper, jobInfo.getInitialDelay(), TimeUnit.SECONDS)
 			}
 		}
 	}

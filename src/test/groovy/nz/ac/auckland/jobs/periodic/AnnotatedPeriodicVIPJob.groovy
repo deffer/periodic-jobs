@@ -25,4 +25,8 @@ class AnnotatedPeriodicVIPJob extends Counter implements Job{
 		super.execute()
 		log.debug("AnnotatedPeriodicVIPJob run cycle $count")
 	}
+
+	public boolean assertJobSchedule(boolean vip, long initialDelay, long delay){
+		return vip && delay == 1l && initialDelay == 1l
+	}
 }

@@ -23,4 +23,8 @@ class AnnotatedDisabledJob extends Counter implements Job{
 	Runnable getRunnable() {
 		return this.&execute;
 	}
+
+	public boolean assertJobSchedule(boolean vip, long initialDelay, long delay){
+		return false // job should not be scheduled
+	}
 }
