@@ -11,7 +11,7 @@
 	<artifactId>periodic-jobs</artifactId>
 	<packaging>jar</packaging>
 	<name>periodic-jobs</name>
-	<version>3.3-SNAPSHOT</version>
+	<version>3.3</version>
 
 	<description>
 		Simple scheduler for periodic jobs. Requires Spring.
@@ -20,7 +20,7 @@
 		<url>https://github.com/deffer/periodic-jobs</url>
 		<connection>scm:git:https://github.com/deffer/periodic-jobs.git</connection>
 		<developerConnection>scm:git:git@github.com:deffer/periodic-jobs.git</developerConnection>
-		<tag>HEAD</tag>
+		<tag>periodic-jobs-3.3</tag>
 	</scm>
 
 
