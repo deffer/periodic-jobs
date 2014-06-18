@@ -13,16 +13,12 @@ class UnitTest {
 	public void testAnnotatedJobSchedule(){
 		PeriodicJobs pj = new PeriodicJobs()
 
-		def disabledJob =  new AnnotatedDisabledJob()
-		def initVIP = new AnnotatedInitVIPJob()
-		def confJob = new AnnotatedPeriodicConfiguredJob()
-		def periodicJob = new AnnotatedPeriodicJob()
-		def vipJob = new AnnotatedPeriodicVIPJob()
-
 		System.properties.put("jobs.notificationConfiguredJob.delay", "25")
 		System.properties.put("jobs.notificationConfiguredJob.initialDelay", "20")
+		System.properties.put("jobs.disabledInConfigJob.enabled", "false")
 
-		pj.runnables = [disabledJob, initVIP, confJob, periodicJob, vipJob]
+		pj.runnables = [new AnnotatedDisabledJob(), new AnnotatedInitVIPJob(), new AnnotatedPeriodicConfiguredJob(),
+				new AnnotatedPeriodicJob(), new AnnotatedPeriodicVIPJob(), new AnnotatedDisabledInConfigJob()]
 
 		def errors = []
 		def scheduled = []

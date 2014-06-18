@@ -1,5 +1,27 @@
 # Periodic jobs Changelog
 
+## 3.3
+
+Deprecated:
+
+- All interfaces are deprecated now
+
+New:
+
+- New interface for all jobs - Job
+- Annotations to provide default configuration
+- Job configuration is looked up in the System.properties
+
+## 3.2
+
+New:
+
+- Can access job through execution log
+
+Fixes:
+
+- Fixed configuration
+
 ## 3.1
 
 New:
