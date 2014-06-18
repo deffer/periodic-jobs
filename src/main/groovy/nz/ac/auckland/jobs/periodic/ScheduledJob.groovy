@@ -10,13 +10,13 @@ import java.util.concurrent.ScheduledFuture
  *   types of the job derived from configuration, scheduled future)
  */
 class ScheduledJob {
-	AbstractJob job
-	AbstractJob wrapper
+	protected AbstractJob job
+	protected AbstractJob wrapper
 
-	ScheduledFuture<?> future;
+	protected ScheduledFuture<?> future;
 	protected Cache<Date, ScheduledJobEvent> executions;
 
-	Job instance
+	protected Job instance
 	String name
 	String displayName
 	boolean privileged = false
@@ -28,8 +28,8 @@ class ScheduledJob {
 
 
 	AbstractJob getJob(){
-		if (job)
-			return job
+		if (this.@job)
+			return this.@job
 		else{
 			if (!wrapper)
 				wrapper = WrapperFactory.wrapJob(this)
@@ -38,8 +38,8 @@ class ScheduledJob {
 	}
 
 	boolean isPeriodic(){
-		if (this.job)
-			return job instanceof AbstractPeriodicJob
+		if (this.@job)
+			return this.@job instanceof AbstractPeriodicJob
 		else{
 			return isPeriodic
 		}

@@ -59,7 +59,7 @@ class PeriodicJobs extends DeprecatedPeriodicJobs {
 
 	private Logger log = LoggerFactory.getLogger(PeriodicJobs.class)
 
-	String logInstance
+	protected String logInstance
 
 	static int LOG_CACHE_SIZE = 100
 	static SimpleDateFormat df = new SimpleDateFormat('yyyy-MM-dd HH:mm:ss')
@@ -73,16 +73,16 @@ class PeriodicJobs extends DeprecatedPeriodicJobs {
 	@ConfigKey("periodicJobs.defaultInitialDelay")
 	Long defaultInitialDelay = 5
 
-	@ConfigKey("periodicJobs.defaultInitialDelay")
+	@ConfigKey("periodicJobs.defaultDelay")
 	Long defaultPeriodicDelay = 300
 
 	// executors
-	ScheduledExecutorService multiThreadExecutor = Executors.newScheduledThreadPool(3)
-	ScheduledExecutorService singleThreadExecutor = Executors.newSingleThreadScheduledExecutor()
+	protected ScheduledExecutorService multiThreadExecutor = Executors.newScheduledThreadPool(3)
+	protected ScheduledExecutorService singleThreadExecutor = Executors.newSingleThreadScheduledExecutor()
 
-	Map<Job, ScheduledJobInfo> jobs = [:]
+	protected Map<Job, ScheduledJobInfo> jobs = [:]
 
-	boolean initialized = false // spring calls init() several times, so we need to make sure we only initialize once
+	protected boolean initialized = false // spring calls init() several times, so we need to make sure we only initialize once
 
 	@CompileStatic(TypeCheckingMode.SKIP)
 	@PostConfigured
@@ -185,7 +185,6 @@ class PeriodicJobs extends DeprecatedPeriodicJobs {
 	 * @return
 	 * @deprecated
 	 */
-	@CompileStatic(TypeCheckingMode.SKIP)
 	public Map<Date, ExecutionEvent> getExecutionLog(AbstractJob job){
 		Map<Date, ExecutionEvent> result = [:]
 		getJobInfo(job)?.executions?.asMap()?.each{Date k, ScheduledJobEvent v ->
@@ -201,7 +200,6 @@ class PeriodicJobs extends DeprecatedPeriodicJobs {
 	 * @return
 	 * @deprecated
 	 */
-	@CompileStatic(TypeCheckingMode.SKIP)
 	protected ScheduledJobInfo getJobInfo(AbstractJob job){
 		ScheduledJob result = multiThreadJobs.get(job)?: (singleThreadJobs.get(job)?: initJobs.get(job))
 		return result as ScheduledJobInfo
@@ -332,8 +330,8 @@ class PeriodicJobs extends DeprecatedPeriodicJobs {
 	 */
 	class ScheduledJobInfo extends ScheduledJob{
 		Long getInitialDelay(){
-			if (this.job) {
-				Long result = job.initialDelay
+			if (this.@job) {
+				Long result = this.@job.initialDelay
 				return result?: defaultInitialDelay
 			} else {
 				return this.@initialDelay
@@ -342,8 +340,8 @@ class PeriodicJobs extends DeprecatedPeriodicJobs {
 
 		Long getPeriodicDelay(){
 			if (isPeriodic()) {
-				if (this.job) {
-					Long result = ((AbstractPeriodicJob) job).periodicDelay
+				if (this.@job) {
+					Long result = ((AbstractPeriodicJob) this.@job).periodicDelay
 					return result?: defaultPeriodicDelay
 				} else {
 					return this.@delay

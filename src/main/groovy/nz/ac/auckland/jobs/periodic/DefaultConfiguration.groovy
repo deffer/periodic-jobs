@@ -17,16 +17,23 @@ import java.lang.annotation.Target
 @Target(ElementType.TYPE)
 public @interface DefaultConfiguration {
 
-
+	/**
+	 * Disabled jobs will not be scheduled
+	 * @return
+	 */
 	boolean enabled() default true
 
-
+	/**
+	 * Delay before first execution (in seconds)
+	 * @return
+	 */
 	long initialDelay() default 5l
 
 	/**
 	 * A simplest way to define a periodic job (without using cron rules). Sets a delay between job executions
 	 *   (between end of previous job and start of next job) in seconds.
-	 * Set to negative value if you only want your job to run once.
+	 *
+	 * Set to negative value if you only want your job to run once (Intellij IDEA may complain, but it compiles anyway)
 	 *   Initial delay will still be respected.
 	 *
 	 * @return delay between job executions (between end of previous job and start of next job) in seconds.
