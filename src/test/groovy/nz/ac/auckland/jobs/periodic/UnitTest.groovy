@@ -11,7 +11,7 @@ import java.util.concurrent.ScheduledExecutorService
 class UnitTest {
 	@Test
 	public void testAnnotatedJobSchedule(){
-		PeriodicJobs pj = new PeriodicJobs()
+		PeriodicJobsImpl pj = new PeriodicJobsImpl()
 
 		System.properties.put("jobs.notificationConfiguredJob.delay", "25")
 		System.properties.put("jobs.notificationConfiguredJob.initialDelay", "20")

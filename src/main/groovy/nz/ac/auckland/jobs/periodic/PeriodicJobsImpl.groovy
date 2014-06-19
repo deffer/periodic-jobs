@@ -47,7 +47,7 @@ import groovy.transform.CompileStatic
  */
 @CompileStatic
 @UniversityComponent
-class PeriodicJobsImpl {
+class PeriodicJobsImpl implements PeriodicJobs{
 
 	private Logger log = LoggerFactory.getLogger(PeriodicJobsImpl.class)
 
@@ -111,6 +111,7 @@ class PeriodicJobsImpl {
 		log.info(jobs?"${jobs.size()} jobs found (new).":"No jobs found." + " Instance: $logInstance")
 	}
 
+	@Override
 	public List<ScheduledJob> listJobs(){
 		return jobs.values().asList()
 	}
@@ -123,6 +124,7 @@ class PeriodicJobsImpl {
 	 *
 	 * @param job job to cancel. Has to be one of supported job interfaces.
 	 */
+	@Override
 	public void cancelJob(Job job){
 		getFuture(job)?.cancel(false)
 	}
@@ -134,17 +136,19 @@ class PeriodicJobsImpl {
 	 * @param job
 	 * @return
 	 */
+	@Override
 	public ScheduledFuture<?> getFuture(Job job){
 		return getJobInfo(job)?.future
 	}
 
+	@Override
 	public Map<Date, ScheduledJobEvent> getExecutionLog(Job job){
 		Map<Date, ScheduledJobEvent> result = getJobInfo(job)?.executions?.asMap()
 		return result ?: [:]
 	}
 
-
-	protected ScheduledJob getJobInfo(job){
+	@Override
+	public ScheduledJob getJobInfo(job){
 		return jobs.get(job)
 	}
 
