@@ -9,10 +9,7 @@ import nz.ac.auckland.common.stereotypes.UniversityComponent
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler
-import org.springframework.scheduling.support.CronTrigger
 
-import java.lang.annotation.Annotation
 import java.text.SimpleDateFormat
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
@@ -50,9 +47,9 @@ import groovy.transform.CompileStatic
  */
 @CompileStatic
 @UniversityComponent
-class PeriodicJobs {
+class PeriodicJobsImpl {
 
-	private Logger log = LoggerFactory.getLogger(PeriodicJobs.class)
+	private Logger log = LoggerFactory.getLogger(PeriodicJobsImpl.class)
 
 	protected String logInstance
 
