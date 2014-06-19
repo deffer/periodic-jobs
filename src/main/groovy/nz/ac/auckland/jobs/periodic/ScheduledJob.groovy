@@ -7,6 +7,8 @@ import java.util.concurrent.ScheduledFuture
 /**
  * All information about certain job as collected at runtime (configuration read from properties,
  *   types of the job derived from configuration, scheduled future)
+ *
+ * author: Irina Benediktovich - http://plus.google.com/+IrinaBenediktovich
  */
 class ScheduledJob {
 
@@ -27,7 +29,7 @@ class ScheduledJob {
 		return isPeriodic
 	}
 
-	String getJobType(){
+	public String getJobType(){
 		String result = "Init"
 		if (!periodic){
 			result = "Periodic" + cron?" (cron)" : ""

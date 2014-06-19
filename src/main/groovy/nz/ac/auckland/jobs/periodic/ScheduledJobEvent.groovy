@@ -2,7 +2,11 @@ package nz.ac.auckland.jobs.periodic
 
 import java.text.SimpleDateFormat
 
-
+/**
+ * Log of on execution of a job (start and finish times, error if it had one)
+ *
+ * author: Irina Benediktovich - http://plus.google.com/+IrinaBenediktovich
+ */
 class ScheduledJobEvent {
 	static SimpleDateFormat df = new SimpleDateFormat('yyyy-MM-dd HH:mm:ss')
 

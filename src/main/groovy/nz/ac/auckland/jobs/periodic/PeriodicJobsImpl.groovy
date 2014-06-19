@@ -9,9 +9,12 @@ import nz.ac.auckland.common.stereotypes.UniversityComponent
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.scheduling.Trigger
+import org.springframework.scheduling.support.CronTrigger
 
 import java.text.SimpleDateFormat
 import java.util.concurrent.Executors
+import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
@@ -43,7 +46,7 @@ import groovy.transform.CompileStatic
  *
  *  Scheduler can be turned off globally (for all jobs) by setting System property periodicJobs.enabled=false
  *
- * author: Irina Benediktovich - http://gplus.to/IrinaBenediktovich
+ * author: Irina Benediktovich - http://plus.google.com/+IrinaBenediktovich
  */
 @CompileStatic
 @UniversityComponent
@@ -72,6 +75,9 @@ class PeriodicJobsImpl implements PeriodicJobs{
 	protected ScheduledExecutorService multiThreadExecutor = Executors.newScheduledThreadPool(3)
 	protected ScheduledExecutorService singleThreadExecutor = Executors.newSingleThreadScheduledExecutor()
 
+	// helper
+	ScheduleExecutorWrapper scheduler
+
 	protected Map<Job, ScheduledJob> jobs = [:]
 
 	protected boolean initialized = false // spring calls init() several times, so we need to make sure we only initialize once
@@ -97,6 +103,8 @@ class PeriodicJobsImpl implements PeriodicJobs{
 			log.warn('Already initialized')
 			return
 		}
+
+		scheduler = new ScheduleExecutorWrapper()
 
 		runnables.each {Job job ->
 			ScheduledJob jobInfo = createJob(job)
@@ -162,8 +170,11 @@ class PeriodicJobsImpl implements PeriodicJobs{
 		}else{
 			Cache<Date, ScheduledJobEvent> cache = CacheBuilder.newBuilder().maximumSize(LOG_CACHE_SIZE).build()
 			jobInfo.executions = cache  // cant do this assignment with CompileStatic on (o_0)
-
-			scheduleJob(job, jobInfo.isPrivileged()?singleThreadExecutor:multiThreadExecutor, jobInfo)
+			try{
+				scheduleJob(job, jobInfo)
+			}catch (Exception e){
+				log.error("Unable to schedule job ${job}. Error: ${e.getMessage()}", e)
+			}
 		}
 
 		return jobInfo
@@ -216,14 +227,13 @@ class PeriodicJobsImpl implements PeriodicJobs{
 	}
 
 	@CompileStatic(TypeCheckingMode.SKIP)
-	protected void scheduleJob(Job job, ScheduledExecutorService executor, ScheduledJob into){
+	protected void scheduleJob(Job job, ScheduledJob into){
 		ScheduledJob jobInfo = into
 		Closure wrapper = {
 			log.debug("Job running: ${job.class.name}")
 			ScheduledJobEvent event = new ScheduledJobEvent(start: new Date())
 			jobInfo.executions.put(event.start, event)
 
-			// TODO if its cron and initial delay has not passed yet, skip execution
 			try{
 				job.runnable.run()
 			}catch (Throwable error){
@@ -236,12 +246,42 @@ class PeriodicJobsImpl implements PeriodicJobs{
 		log.debug("Scheduling job: ${job.class.name} (${into.initialDelay}:${into.delay})")
 
 		if (jobInfo.cron){
-			 // TODO schedule cron job
+			scheduler.schedule(wrapper, jobInfo.cron, jobInfo.isPrivileged())
 		}else{
 			if (jobInfo.isPeriodic()){
-				jobInfo.future = executor.scheduleWithFixedDelay(wrapper, jobInfo.initialDelay, jobInfo.delay, TimeUnit.SECONDS)
+				jobInfo.future = scheduler.scheduleWithFixedDelay(wrapper, jobInfo.initialDelay, jobInfo.delay, jobInfo.isPrivileged())
 			}else{
-				jobInfo.future = executor.schedule(wrapper, jobInfo.initialDelay, TimeUnit.SECONDS)
+				jobInfo.future = scheduler.schedule(wrapper, jobInfo.initialDelay, jobInfo.isPrivileged())
+			}
+		}
+	}
+
+	/**
+	 * Helper class. Schedules jobs using different executors based on job's privileged status.
+	 */
+	class ScheduleExecutorWrapper {
+
+		ScheduledExecutorService getExecutor(boolean singleThread){
+			if (singleThread)
+				return singleThreadExecutor
+			else
+				return multiThreadExecutor
+		}
+
+		public ScheduledFuture<?> schedule(Runnable task,long delay, boolean privileged){
+			getExecutor(privileged).schedule(task, delay, TimeUnit.SECONDS)
+		}
+
+		public ScheduledFuture<?> scheduleWithFixedDelay(Runnable task, long initialDelay, long delay, boolean privileged){
+			getExecutor(privileged).scheduleWithFixedDelay(task, initialDelay, delay, TimeUnit.SECONDS)
+		}
+
+		public ScheduledFuture schedule(Runnable task, String cronExpression, boolean privileged){
+			Trigger trigger = new CronTrigger(cronExpression)
+			try {
+				return new CronExecutorWrapper(task, trigger, getExecutor(privileged)).schedule();
+			} catch (RejectedExecutionException ex) {
+				throw new Exception("Executor ${getExecutor(privileged)} did not accept task for cron '$cronExpression'", ex);
 			}
 		}
 	}
