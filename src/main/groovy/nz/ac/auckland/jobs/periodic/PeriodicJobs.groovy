@@ -6,10 +6,11 @@ import groovy.transform.TypeCheckingMode
 import net.stickycode.stereotype.configured.PostConfigured
 import nz.ac.auckland.common.config.ConfigKey
 import nz.ac.auckland.common.stereotypes.UniversityComponent
-import nz.ac.auckland.jobs.periodic.depr.WrapperFactory
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler
+import org.springframework.scheduling.support.CronTrigger
 
 import java.lang.annotation.Annotation
 import java.text.SimpleDateFormat
@@ -45,17 +46,11 @@ import groovy.transform.CompileStatic
  *
  *  Scheduler can be turned off globally (for all jobs) by setting System property periodicJobs.enabled=false
  *
- *  Deprecated functionality:
- *
- *  This is a transition from old-style job definition (PeriodicQueuedJob, PeriodicJob, InitJob) to new style
- *  (extends Job and annotated with @DefaultConfiguration). At the moment it supports both, but old style will be
- *  dropped in the next release.
- *
  * author: Irina Benediktovich - http://gplus.to/IrinaBenediktovich
  */
 @CompileStatic
 @UniversityComponent
-class PeriodicJobs extends DeprecatedPeriodicJobs {
+class PeriodicJobs {
 
 	private Logger log = LoggerFactory.getLogger(PeriodicJobs.class)
 
@@ -80,13 +75,14 @@ class PeriodicJobs extends DeprecatedPeriodicJobs {
 	protected ScheduledExecutorService multiThreadExecutor = Executors.newScheduledThreadPool(3)
 	protected ScheduledExecutorService singleThreadExecutor = Executors.newSingleThreadScheduledExecutor()
 
-	protected Map<Job, ScheduledJobInfo> jobs = [:]
+	protected Map<Job, ScheduledJob> jobs = [:]
 
 	protected boolean initialized = false // spring calls init() several times, so we need to make sure we only initialize once
 
 	@CompileStatic(TypeCheckingMode.SKIP)
 	@PostConfigured
 	public void init(){
+
 		if (!enabled){
 			log.warn('Periodic jobs are disabled. To enable remove periodicJobs.enabled or set to true')
 			return
@@ -105,14 +101,9 @@ class PeriodicJobs extends DeprecatedPeriodicJobs {
 			return
 		}
 
-		initDeprecatedJobs(this.&createDeprecatedJob, multiThreadExecutor, singleThreadExecutor)
-
-		List<Job> deprecatedJobs = [] + multiThreadRunnables + singleThreadRunnables + initRunnables
 		runnables.each {Job job ->
-			if (!(job in deprecatedJobs)){
-				ScheduledJobInfo jobInfo = createJob(job)
-				jobs.put(job, jobInfo)
-			}
+			ScheduledJob jobInfo = createJob(job)
+			jobs.put(job, jobInfo)
 		}
 
 		logInstance  = this.toString()
@@ -120,26 +111,11 @@ class PeriodicJobs extends DeprecatedPeriodicJobs {
 			logInstance = logInstance.split('@').last()
 		}
 
-		String message = reportJobs()
-		if (jobs) message += " ${jobs.size()} jobs found (new)."
-
-		log.info(message?:"No jobs found." + " Instance: $logInstance")
-	}
-
-	/**
-	 * Only returns deprecated jobs
-	 * @return
-	 * @deprecated use listJobs to see all jobs
-	 */
-	@CompileStatic(TypeCheckingMode.SKIP)
-	public List<ScheduledJobInfo> listAllJobs(){
-		return [] + multiThreadJobs.values() + singleThreadJobs.values() + initJobs.values()
+		log.info(jobs?"${jobs.size()} jobs found (new).":"No jobs found." + " Instance: $logInstance")
 	}
 
 	public List<ScheduledJob> listJobs(){
-		def result = listAllJobs()
-		result += jobs.values()
-		return result
+		return jobs.values().asList()
 	}
 
 	/**
@@ -150,20 +126,10 @@ class PeriodicJobs extends DeprecatedPeriodicJobs {
 	 *
 	 * @param job job to cancel. Has to be one of supported job interfaces.
 	 */
-	public void cancelJob(AbstractJob job){
+	public void cancelJob(Job job){
 		getFuture(job)?.cancel(false)
 	}
 
-	/**
-	 * Returns ScheduledFuture attached to given job. Contains some not very useful info.
-	 * ScheduledFuture.isDone() returns true if job has finished and is not scheduled to run again (for instance after periodic task was cancelled).
-	 * @param job
-	 * @return
-	 * @deprecated
-	 */
-	public ScheduledFuture<?> getFuture(AbstractJob job){
-		return getJobInfo(job)?.future
-	}
 
 	/**
 	 * Returns ScheduledFuture attached to given job. Contains some not very useful info.
@@ -176,64 +142,18 @@ class PeriodicJobs extends DeprecatedPeriodicJobs {
 	}
 
 	public Map<Date, ScheduledJobEvent> getExecutionLog(Job job){
-		return getJobInfo(job)?.executions?.asMap()
+		Map<Date, ScheduledJobEvent> result = getJobInfo(job)?.executions?.asMap()
+		return result ?: [:]
 	}
 
-	/**
-	 *
-	 * @param job
-	 * @return
-	 * @deprecated
-	 */
-	public Map<Date, ExecutionEvent> getExecutionLog(AbstractJob job){
-		Map<Date, ExecutionEvent> result = [:]
-		getJobInfo(job)?.executions?.asMap()?.each{Date k, ScheduledJobEvent v ->
-			if (v instanceof ExecutionEvent)
-				result.put(k, v as ExecutionEvent)
-		}
-		return result
-	}
-
-	/**
-	 *
-	 * @param job
-	 * @return
-	 * @deprecated
-	 */
-	protected ScheduledJobInfo getJobInfo(AbstractJob job){
-		ScheduledJob result = multiThreadJobs.get(job)?: (singleThreadJobs.get(job)?: initJobs.get(job))
-		return result as ScheduledJobInfo
-	}
 
 	protected ScheduledJob getJobInfo(job){
 		return jobs.get(job)
 	}
 
-	/**
-	 *
-	 * @param job
-	 * @param executor
-	 * @return
-	 * @deprecated
-	 */
 	@CompileStatic(TypeCheckingMode.SKIP)
-	protected ScheduledJob createDeprecatedJob(AbstractJob job, ScheduledExecutorService executor){
-		ScheduledJobInfo jobInfo = new ScheduledJobInfo(job:job)
-		Cache<Date, ScheduledJobEvent> cache = CacheBuilder.newBuilder().maximumSize(LOG_CACHE_SIZE).build()
-		jobInfo.executions = cache
-
-		if (!job.isEnabled()){
-			log.debug("Deprecated job ${job} will not be schedules because it is disabled.")
-		}else{
-			scheduleJob(job, executor, jobInfo)
-		}
-
-		return jobInfo
-	}
-
-	@CompileStatic(TypeCheckingMode.SKIP)
-	protected ScheduledJobInfo createJob(Job job){
-		ScheduledJobInfo jobInfo = new ScheduledJobInfo(instance: job)
+	protected ScheduledJob createJob(Job job){
+		ScheduledJob jobInfo = new ScheduledJob(instance: job)
 		initJob(job, jobInfo)
 
 		if (!jobInfo.enabled){
@@ -295,12 +215,12 @@ class PeriodicJobs extends DeprecatedPeriodicJobs {
 	}
 
 	@CompileStatic(TypeCheckingMode.SKIP)
-	protected void scheduleJob(Job job, ScheduledExecutorService executor, ScheduledJobInfo into){
-		ScheduledJobInfo jobInfo = into
+	protected void scheduleJob(Job job, ScheduledExecutorService executor, ScheduledJob into){
+		ScheduledJob jobInfo = into
 		Closure wrapper = {
 			log.debug("Job running: ${job.class.name}")
-			ExecutionEvent event = new ExecutionEvent(start: new Date())
-			jobInfo.addExecution(event.start, event)
+			ScheduledJobEvent event = new ScheduledJobEvent(start: new Date())
+			jobInfo.executions.put(event.start, event)
 
 			// TODO if its cron and initial delay has not passed yet, skip execution
 			try{
@@ -312,58 +232,16 @@ class PeriodicJobs extends DeprecatedPeriodicJobs {
 			return jobInfo
 		}
 
-		log.debug("Scheduling job: ${job.class.name} (${into.getInitialDelay()}:${into.getPeriodicDelay()})")
+		log.debug("Scheduling job: ${job.class.name} (${into.initialDelay}:${into.delay})")
 
 		if (jobInfo.cron){
 			 // TODO schedule cron job
 		}else{
 			if (jobInfo.isPeriodic()){
-				jobInfo.future = executor.scheduleWithFixedDelay(wrapper, jobInfo.getInitialDelay(), jobInfo.getPeriodicDelay(), TimeUnit.SECONDS)
+				jobInfo.future = executor.scheduleWithFixedDelay(wrapper, jobInfo.initialDelay, jobInfo.delay, TimeUnit.SECONDS)
 			}else{
-				jobInfo.future = executor.schedule(wrapper, jobInfo.getInitialDelay(), TimeUnit.SECONDS)
+				jobInfo.future = executor.schedule(wrapper, jobInfo.initialDelay, TimeUnit.SECONDS)
 			}
 		}
-	}
-
-	/**
-	 * @deprecated
-	 */
-	class ScheduledJobInfo extends ScheduledJob{
-		Long getInitialDelay(){
-			if (this.@job) {
-				Long result = this.@job.initialDelay
-				return result?: defaultInitialDelay
-			} else {
-				return this.@initialDelay
-			}
-		}
-
-		Long getPeriodicDelay(){
-			if (isPeriodic()) {
-				if (this.@job) {
-					Long result = ((AbstractPeriodicJob) this.@job).periodicDelay
-					return result?: defaultPeriodicDelay
-				} else {
-					return this.@delay
-				}
-			} else {
-				return null
-			}
-		}
-
-		protected void addExecution(Date date, ExecutionEvent event){
-			try{
-				this.@executions.put(date, event)
-			}catch (Exception e){
-				e.printStackTrace()
-			}
-		}
-	}
-
-	/**
-	 * @deprecated
-	 */
-	class ExecutionEvent extends ScheduledJobEvent{
-
 	}
 }

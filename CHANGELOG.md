@@ -1,5 +1,9 @@
 # Periodic jobs Changelog
 
+## 4.1
+
+- Removed deprecated functionality
+
 ## 3.3
 
 Deprecated:

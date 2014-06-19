@@ -11,10 +11,10 @@
 	<artifactId>periodic-jobs</artifactId>
 	<packaging>jar</packaging>
 	<name>periodic-jobs</name>
-	<version>3.4-SNAPSHOT</version>
+	<version>4.1-SNAPSHOT</version>
 
 	<description>
-		Simple scheduler for periodic jobs. Requires Spring.
+		Simple scheduler and manager of periodic jobs. Requires Spring.
 	</description>
 	<scm>
 		<url>https://github.com/deffer/periodic-jobs</url>

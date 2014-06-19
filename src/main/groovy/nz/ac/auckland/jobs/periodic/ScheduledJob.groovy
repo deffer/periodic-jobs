@@ -1,7 +1,6 @@
 package nz.ac.auckland.jobs.periodic
 
 import com.google.common.cache.Cache
-import nz.ac.auckland.jobs.periodic.depr.WrapperFactory
 
 import java.util.concurrent.ScheduledFuture
 
@@ -10,8 +9,6 @@ import java.util.concurrent.ScheduledFuture
  *   types of the job derived from configuration, scheduled future)
  */
 class ScheduledJob {
-	protected AbstractJob job
-	protected AbstractJob wrapper
 
 	protected ScheduledFuture<?> future;
 	protected Cache<Date, ScheduledJobEvent> executions;
@@ -26,44 +23,17 @@ class ScheduledJob {
 	boolean enabled = true
 	String cron
 
-
-	AbstractJob getJob(){
-		if (this.@job)
-			return this.@job
-		else{
-			if (!wrapper)
-				wrapper = WrapperFactory.wrapJob(this)
-			return wrapper
-		}
-	}
-
 	boolean isPeriodic(){
-		if (this.@job)
-			return this.@job instanceof AbstractPeriodicJob
-		else{
-			return isPeriodic
-		}
+		return isPeriodic
 	}
-
 
 	String getJobType(){
-		if (job){
-			if (job instanceof PeriodicJob)
-				return 'Periodic'
-			else if (job instanceof QueuedPeriodicJob)
-				return 'Queued'
-			else if (job instanceof InitJob)
-				return 'Init'
-			else
-				return 'Unknown'
-		}else{
-			String result = "Init"
-			if (!periodic){
-				result = "Periodic" + cron?" (cron)" : ""
-			}
-			if (privileged)
-				result+= "(privileged)"
-			return result
+		String result = "Init"
+		if (!periodic){
+			result = "Periodic" + cron?" (cron)" : ""
 		}
+		if (privileged)
+			result+= "(privileged)"
+		return result
 	}
 }
